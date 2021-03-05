@@ -17,10 +17,20 @@ I've done that!
 
 Todo:
 Mesh Tools Page:
-- - [ ] tool for merging objects together via overlapping vertices!
-	- Consider trying to remove the hidden faces (if there are faces which are entirely made up of faces that will be merged then try removing it I guess?)
-- - [ ] Scale mesh
+- - [ ] Implement UI for:
+	- mesh page:
+		- - [ ] Merge overlapping vertices
+			- this should also now destroy hidden faces! Hopefully! I should make a checkbox for it though in the UI
+		- - [ ] Merge two meshes
+		- - [ ] Clean up invalid faces
+		- - [ ] Scale mesh
 
+- - [ ] Tool for mirroring a mesh across an axis
+- - [ ] Tool for duplicating a mesh
+- - [ ] Tool for deleting a mesh
+	- use it to delete the mesh after you merge the above mesh! makes sense.
+- - [ ] Tool for separating objects if they aren't connected? Hmmmm
+	- this is only really useful if there's a way to split an edge, which I'm not sure how to make so maybe not
 - - [ ] Tool for merging/unmerging the uvs of a mirrored face?
 - - [x] UI entry box for how to scale the uvs when generating them
 - - [x] UI entry box for which object to unwrap (so that you can scale them individually)
@@ -100,6 +110,10 @@ class PicoFace:
 		# self.get_scaled_projected_points_to_distance()
 		# self.test_create_normals()
 		self.dirty = False
+
+	def copy(self):
+		# return a copy!
+		return PicoFace(self.obj, self.vertices, self.uvs, self.color, self.doublesided, self.notshaded, self.priority, self.nottextured)
 
 	def __str__(self):
 		t = "F: vertices: " + ", ".join([str(x) for x in self.vertices]) + ", uvs: " + ", ".join([str(x) for x in self.uvs]) + ",\t\tc=" + str(self.color)
@@ -353,6 +367,102 @@ class PicoObject:
 			if f.is_dirty():
 				return True
 		return False
+
+	def get_position_matrix(self):
+		return [[1, 0, 0, self.pos.x],\
+				[0, 1, 0, self.pos.y],\
+				[0, 0, 1, self.pos.z],\
+				[0, 0, 0, 1]]
+
+	def get_inverse_position_matrix(self):
+		return [[1, 0, 0, -self.pos.x],\
+				[0, 1, 0, -self.pos.y],\
+				[0, 0, 1, -self.pos.z],\
+				[0, 0, 0, 1]]
+
+	def merge_overlapping_vertices(self, distance = 0, remove_hidden_faces = True):
+		overlapping = {}
+		to_be_removed = []
+		to_be_merged = []
+		for i in range(len(self.vertices)-1):
+			if i in to_be_removed:
+				continue # we're removing this vertex thus it can't be used as the replacement for another one!
+			for j in range(i+1, len(self.vertices)):
+				# check to see if they're matching!
+				magnitude = (self.vertices[i] - self.vertices[j]).magnitude()
+				if magnitude < distance:
+					# then mark them to be merged!
+					to_be_removed.append(j)
+					to_be_merged.append(j)
+					to_be_merged.append(i)
+					overlapping[j] = i # j becomes i
+		for f in self.faces:
+			# check all the vertices! If they're set to be removed then remove them!
+			for i in range(len(f.vertices)):
+				if f.vertices[i]-1 in overlapping:
+					# then we should replace it!
+					f.vertices[i] = overlapping[f.vertices[i]-1] + 1 # have to convert between lua's 1 indexing and python's 0
+					f.dirty = True
+
+		if remove_hidden_faces:
+			# if a face is made up entirely of vertices that are being merged with a different vertex then remove it!
+			remove_faces = []
+			for f in self.faces:
+				covered = True
+				for v in f.vertices:
+					if v-1 not in to_be_merged:
+						# then it's not being merged!
+						covered = False
+						break
+				if covered:
+					remove_faces.append(f)
+					self.dirty = True
+			# now remove all the faces that are covered!
+			for f in remove_faces:
+				self.faces.remove(f)
+		return len(to_be_removed)
+
+	def remove_invalid_faces(self):
+		# loop over the faces and figure out if we should remove some because they have two or fewer unique vertices!
+		# should consider making a function that removes vertices from a face if there are two right next to each other that
+		# have identical indices, but arguably you could use that in your UV map? So maybe I should make it optional somehow...
+		# that seems to imply selecting faces though which is tough.
+		to_remove = []
+		for f in self.faces:
+			vertices = set()
+			for v in f.vertices:
+				# add the index to the vertex list!
+				vertices.add(v)
+			if len(vertices) < 3:
+				# then it's not a valid face and we should remove it!
+				to_remove.append(f)
+				self.dirty = True
+		for f in to_remove:
+			self.faces.remove(f)
+
+	def combine_other_object(self, other):
+		# add all the vertices/faces from that object into this one!
+		vertex_offset = len(self.vertices) # the model that gets imported needs to have offset values!
+		# add all the vertices from the other object
+		# make a matrix to transform it from this position to that position!
+		# need to adjust the vertex positions!
+		this_inverse_pos_mat = self.get_position_matrix()
+		other_pos_mat = other.get_inverse_position_matrix()
+
+		for v in other.vertices:
+			transformed = v.mat_mult(other_pos_mat)
+			transformed = transformed.mat_mult(this_inverse_pos_mat)
+			self.vertices.append(transformed)
+		# now append the faces with the offset!
+		for f in other.faces:
+			# make a new face!
+			newFace = f.copy()
+			newFace.obj = self
+			newFace.dirty = True
+			newFace.vertices = [x + vertex_offset for x in newface.vertices]
+			self.faces.append(newFace)
+		self.dirty = True
+
 
 	def mark_clean(self):
 		self.dirty = False
@@ -646,6 +756,14 @@ class SimpleVector:
 
 	def normalize(self):
 		return self.copy() / self.magnitude()
+
+	def mat_mult(self, mat):
+		# the matrix is [[1,2,3,4],[5,6,7,8],[9,10,11,12],[0,0,0,1]]
+		# basically this is a vector3, but we're assuming it's <x,y,z,1>
+		x = self.x * mat[0][0] + self.y * mat[0][1] + self.z * mat[0][2] + mat[0][3]
+		y = self.x * mat[1][0] + self.y * mat[1][1] + self.z * mat[1][2] + mat[1][3]
+		z = self.x * mat[2][0] + self.y * mat[2][1] + self.z * mat[2][2] + mat[2][3]
+		return SimpleVector(x, y, z)
 
 	def __eq__(self, other):
 		return self.x == other[0] and self.y == other[1] and self.z == other[2]
