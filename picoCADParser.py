@@ -19,6 +19,9 @@ Todo:
 tool for merging objects together via overlapping vertices!
 	Consider trying to remove the hidden faces (if there are faces which are entirely made up of faces that will be merged then try removing it I guess?)
 
+Tool for merging/unmerging the uvs of a mirrored face?
+UI entry box for how to scale the uvs when generating them
+UI entry box for which object to unwrap (so that you can scale them individually)
 
 """
 
@@ -171,8 +174,8 @@ class PicoFace:
 				closest_value = dot
 				break
 		if a == [0, 0, 0]:
-			print("ERROR FINDING NICE BASIS OH DEAR...")
-			print("Best basis is " + str(closest_nice_basis), "with value of", closest_value)
+			# print("ERROR FINDING NICE BASIS OH DEAR...")
+			# print("Best basis is " + str(closest_nice_basis), "with value of", closest_value)
 			a = closest_nice_basis
 			if (use_edges_for_basis_fallback):
 				# then we're going to figure out which edge is closest to a world vector and use that!
@@ -191,7 +194,7 @@ class PicoFace:
 						if d > closest_edge_value: # the larger the value the more in line with a world axis it is!
 							closest_edge_value = d
 							closest_edge = curr_edge
-				print("Found edge subsitute, val:", closest_edge_value, closest_edge)
+				# print("Found edge subsitute, val:", closest_edge_value, closest_edge)
 				a = closest_edge
 		a = SimpleVector(a).normalize()
 		b = a.cross(normal).normalize()
@@ -461,7 +464,7 @@ class PicoSave:
 				faces.append(f)
 
 		# now we have all the faces. Let's sort them by dimensions or something? Do I bother sorting them by size? Probably not!
-		max_coords = SimpleVector(128/8, 128/8, 0)
+		max_coords = SimpleVector(128/8, 120/8, 0)
 		row_height = 0
 		num_on_row = 0
 		coords = SimpleVector(border, border, 0)
@@ -584,7 +587,7 @@ class PicoSave:
 			y += 1
 		return img
 
-	def make_UV_image(self, scale = 1):
+	def make_UV_image(self, scale = 1, color_by_face = False):
 		pixelScale = 8 * scale # default picoCAD is 8, can this be changed? no clue, so putting this here
 		# you can now pass in a scalar so that if you wanted a larger texture like a 512x512 texture (so that you can make the textures more detailed) you can!
 		img = Image.new("RGBA", (int(128 * scale), int(128 * scale)), (255, 255, 255))
@@ -592,11 +595,14 @@ class PicoSave:
 		for obj in self.objects:
 			for face in obj.faces:
 				# now draw the uvs!
+				c = (0, 0, 0, 255)
+				if color_by_face:
+					c = colors[face.color]
 				for i in range(len(face.uvs)):
 					# draw a line between the UVs!
 					a = face.uvs[i]
 					b = face.uvs[(i+1) % len(face.uvs)]
-					draw.line((int(a.x*pixelScale), int(a.y*pixelScale), int(b.x*pixelScale), int(b.y*pixelScale)), (0, 0, 0, 255))
+					draw.line((int(a.x*pixelScale), int(a.y*pixelScale), int(b.x*pixelScale), int(b.y*pixelScale)), c)
 		# img.save(uv_image_output_file, "png")
 		return img
 
