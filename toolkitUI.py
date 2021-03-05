@@ -834,6 +834,10 @@ class UVUnwrappingPage(Page):
 	def validate_mesh_number(self, f):
 		# this just sets the error message when the player enters values!
 		model_num = int(f)
+		if picoToolData.picoSave == None:
+			# then return now!
+			self.mesh_to_unwrap_error_message.set("") # no error message I guess becacuse we don't know enough about the mesh yet!
+			return
 		self.mesh_to_unwrap_error_message.set("Save file contains " + str(len(self.picoToolData.picoSave.objects)) + " meshes")
 		if model_num <= 0 and model_num != -1:
 			# then debug print saying invalid index!
