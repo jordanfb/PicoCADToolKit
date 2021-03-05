@@ -16,8 +16,10 @@ import os
 from tkinter.filedialog import askopenfilename
 from shutil import copyfile
 from tkinter import messagebox
+from tkinter import ttk
 
 from picoCADParser import * # my command line code!
+from picoCADDragAndDrop import * # my semi-useless code for windows tools XD
 
 
 
@@ -72,6 +74,9 @@ class PicoToolData:
 		self.filename = ""
 		self.valid_save = False
 		self.picoSave = None
+		self.auto_pack_generated_uvs = tk.IntVar() # 0 is don't auto pack, 1 is naive pack, and 2 is largest first pack
+		self.color_uv_setting = tk.IntVar()
+		self.color_uv_setting.set(1)
 
 		# for debug testing! This makes it much easier for me!
 		self.filename = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/output_file_test.txt"
@@ -230,6 +235,10 @@ class DebugToolsPage(Page):
 		self.mark_dirty_button = tk.Button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
 		self.mark_dirty_button.pack()
 
+		if windows_tools_enabled:
+			self.open_in_picoCAD = tk.Button(self, text = "Open File In PicoCAD", command = self.test_open_in_picoCAD)
+			self.open_in_picoCAD.pack()
+
 		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 		self.master = master
@@ -240,37 +249,180 @@ class DebugToolsPage(Page):
 	def mark_save_dirty(self):
 		self.picoToolData.picoSave.dirty = True
 
+	def test_open_in_picoCAD(self):
+		if windows_tools_enabled:
+			windows = []
+			find_picoCAD_window(windows)
+			# print(windows)
+			if len(windows) == 1:
+				open_file_in_picoCAD_window(windows[0], self.picoToolData.picoSave.original_path)
+
+class UVMasterPage(Page):
+	def __init__(self, master, mainView, picoToolData):
+		self.mainView = mainView
+		self.master = master
+		self.picoToolData = picoToolData
+		Page.__init__(self, master)
+		self.page_name = "UVs"
+
+		uv_tabs = ttk.Notebook(self)
+		uv_tabs.pack()
+		# tab1 = tk.Frame(uv_tabs)
+		tab1 = UVUnwrappingPage(uv_tabs, self.mainView, self.picoToolData)
+		#Add the tab
+	# 	class UVToolsPage(Page):
+	# def __init__(self, master, mainView, picoToolData):
+
+		uv_tabs.add(tab1, text="UV Unwrapping")
+
+		#Make 2nd tab
+		# tab2 = tk.Frame(uv_tabs)
+		tab2 = UVToolsPage(uv_tabs, self.mainView, self.picoToolData)
+		#Add 2nd tab 
+		uv_tabs.add(tab2, text="UV Layout")
+
+		tab3 = UVExportPage(uv_tabs, self.mainView, self.picoToolData)
+		uv_tabs.add(tab3, text="Export")
+
+		uv_tabs.select(tab1)
+
+		uv_tabs.enable_traversal()
+
+
+		# self.test_float_entry = FloatEntry(self)
+		# self.test_float_entry.add_listener(lambda f: print(f))
+		# self.test_float_entry.pack()
+
+		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		self.quitButton.pack()
+
+	def return_to_tools_page(self):
+		self.show_page(self.mainView.tool_page)
+
+class FloatEntry(tk.Entry):
+	def __init__(self, master, initial_value, *args, **kwargs):
+		self.textvariable = tk.StringVar()
+		self.textvariable.set(str(initial_value))
+		self.valCommand = (master.register(self.float_validate),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+		self.invalCommand = (master.register(self.float_invalid),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+		tk.Entry.__init__(self, master, *args, **kwargs, textvariable = self.textvariable, validatecommand = self.valCommand, invalidcommand = self.invalCommand, validate = "all")
+		self.master = master
+		# self.uv_export_scalar = tk.Entry(subframe, validate="all", validatecommand=self.valCommand)
+		self.float_value = initial_value
+		self.on_new_value_functions = [] # list of functions to pass in the new value to!
+		self.only_ints = False # so you can set that if you want to!
+		self["validate"] = "all"
+
+	def float_invalid(self, d, i, P, s, S, v, V, W):
+		# if it's invalid and it's a period or a space when we're leaving focus then we should set it to zero!
+		# print(self["validate"])
+		# I think I could put this code in the validate function now that I know I need to reset the ["validate"] attribute but for now it works
+		if V == "focusout":
+			if len(P) == 0 or P == "-" or (P == "." and not self.only_ints):
+				self.textvariable.set("0")
+				self["validate"] = "all" # reset this I guess??? No clue why this happens
+
+	def float_validate(self, d, i, P, s, S, v, V, W):
+		try:
+			f = float(P)
+			if self.only_ints:
+				f = int(P) # then we gotta try making it an integer!
+			# update our float value!
+			self.float_value = f
+			self.update_float_functions()
+			return True
+		except:
+			if len(P) == 0 or P == "-" or (P == "." and not self.only_ints):
+				self.float_value = 0
+				self.update_float_functions()
+				if V == "focusout":
+					# then we've left the window so set the text to be 0!
+					# self.delete(0, tk.END)
+					# self.insert(0, "0")
+					# self.textvariable.set("0")
+					# print("Tried to set to zero!")
+					return False
+				return True # we'll let them do that since they're probably typing .125 or whatever
+			return False
+
+	def add_listener(self, f):
+		self.on_new_value_functions.append(f)
+
+	def update_float_functions(self):
+		for f in self.on_new_value_functions:
+			f(self.float_value)
+
+
 class UVToolsPage(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.uv_map_scale = 1
 
+		self.master = master
 		self.mainView = mainView
 		self.picoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "UVs"
-		label = tk.Label(self, text="UV Tools:")
-		label.pack(side="top", fill="both", expand=False)
+		# label = tk.Label(self, text="UV Layout Page:")
+		# label.pack(side="top", fill="both", expand=False)
 
 		# self.mark_dirty_button = tk.Button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
 		# self.mark_dirty_button.pack()
 
 		# now add the button to unwrap the normals as best I can! Probably should include a "scalar" button as well
-		label = tk.Label(self, text="Unwrap:") # to space things out!
-		label.pack(side="top", fill="both", expand=False)
+		# label = tk.Label(self, text="Unwrap:") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
 
-		naive_unwrap = tk.Button(self, text = "Naive UV Unwrap Model", command = self.unwrap_model)
-		naive_unwrap.pack()
+		# naive_unwrap = tk.Button(self, text = "Naive UV Unwrap Model", command = self.unwrap_model)
+		# naive_unwrap.pack()
 
-		swap_uvs = tk.Button(self, text = "Swap UVs", command = self.swap_uvs)
-		swap_uvs.pack()
+		# swap_uvs = tk.Button(self, text = "Swap UVs", command = self.swap_uvs)
+		# swap_uvs.pack()
 
-		round_uvs_to_quarter_unit = tk.Button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
-		round_uvs_to_quarter_unit.pack()
+		# round_uvs_to_quarter_unit = tk.Button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
+		# round_uvs_to_quarter_unit.pack()
 
-		# now add the button to space out the normals!
+		# uv_unwrapping_page_button = tk.Button(self, text = "To UV Unwrapping Menu", command = self.show_unwrapping_page)
+		# uv_unwrapping_page_button.pack()
+
+		# label = tk.Label(self, text="") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
+
+		# # now add the button to space out the normals!
 
 		label = tk.Label(self, text="Pack:") # to space things out!
 		label.pack(side="top", fill="both", expand=False)
+
+		self.picoToolData.auto_pack_generated_uvs.set(1)
+
+		naive_pack = tk.Radiobutton(self, 
+                  text="Auto Pack Normals Naively",
+                  # indicatoron = 0,
+                  # width = 20,
+                  # padx = 20, 
+                  variable=self.picoToolData.auto_pack_generated_uvs,
+                  command=self.update_pack_buttons,
+                  value=1)
+		naive_pack.pack()
+
+		largest_pack = tk.Radiobutton(self, 
+                  text="Auto Pack Normals Tallest First",
+                  # indicatoron = 0,
+                  # width = 20,
+                  # padx = 20, 
+                  variable=self.picoToolData.auto_pack_generated_uvs,
+                  command=self.update_pack_buttons,
+                  value=2)
+		largest_pack.pack()
+
+		dontPack = tk.Radiobutton(self, 
+                  text="Don't Automatically Pack",
+                  # indicatoron = 0,
+                  # width = 20,
+                  # padx = 20, 
+                  variable=self.picoToolData.auto_pack_generated_uvs,
+                  command=self.update_pack_buttons,
+                  value=0)
+		dontPack.pack()
 
 		naive_pack = tk.Button(self, text = "Pack Normals Naively", command = self.pack_naively)
 		naive_pack.pack()
@@ -278,41 +430,52 @@ class UVToolsPage(Page):
 		largest_pack = tk.Button(self, text = "Pack Normals Tallest First", command = self.pack_largest_first)
 		largest_pack.pack()
 
-		label = tk.Label(self, text="UV Export Scale: (multiples of .125 below 1, or powers of 2):")
-		label.pack(side="top", fill="both", expand=False)
-
-		valCommand = (master.register(self.validate_export_scalar),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-		
-		subframe = tk.Frame(self) # to align horizontally
-		self.uv_export_scalar = tk.Entry(subframe, validate="all", validatecommand=valCommand)
-		self.uv_export_scalar.pack(side="left")
-		self.valid_entry_label = tk.StringVar()
-		self.valid_entry_label.set("Invalid Scale")
-		label = tk.Label(subframe, textvariable=self.valid_entry_label)
-		label.pack(side="right", fill="both", expand=False)
-		subframe.pack(side="top")
-
-		self.uv_export_button_stringvar = tk.StringVar()
-		self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
-		self.export_uvs = tk.Button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
-		self.export_uvs.pack()
-
 		self.show_uvs = tk.Button(self, text = "Show UVs", command = self.show_uv_map)
 		self.show_uvs.pack()
 
-		label = tk.Label(self, text="\nTextures:") # to space things out!
-		label.pack(side="top", fill="both", expand=False)
+		# label = tk.Label(self, text="\nExport:") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
+
+		# label = tk.Label(self, text="UV Export Scale: (multiples of .125 below 1, or powers of 2):")
+		# label.pack(side="top", fill="both", expand=False)
+
+		# valCommand = (master.register(self.validate_export_scalar),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+		
+		# subframe = tk.Frame(self) # to align horizontally
+		# self.uv_export_scalar = tk.Entry(subframe, validate="all", validatecommand=valCommand)
+		# self.uv_export_scalar.pack(side="left")
+		# self.valid_entry_label = tk.StringVar()
+		# self.valid_entry_label.set("Invalid Scale")
+		# label = tk.Label(subframe, textvariable=self.valid_entry_label)
+		# label.pack(side="right", fill="both", expand=False)
+		# subframe.pack(side="top")
+
+		# self.uv_export_button_stringvar = tk.StringVar()
+		# self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
+		# self.export_uvs = tk.Button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
+		# self.export_uvs.pack()
+
+		# label = tk.Label(self, text="") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
 
 
-		self.export_uvs = tk.Button(self, text = "Export Current Texture as PNG", command = self.export_texture)
-		self.export_uvs.pack()
+		# self.export_uvs = tk.Button(self, text = "Export Current Texture as PNG", command = self.export_texture)
+		# self.export_uvs.pack()
 
-		label = tk.Label(self, text=" ") # to space things out!
-		label.pack(side="top", fill="both", expand=False)
+		# label = tk.Label(self, text=" ") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
 
-		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
-		self.quitButton.pack()
-		self.master = master
+		# self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		# self.quitButton.pack()
+
+	def update_pack_buttons(self):
+		if self.picoToolData.auto_pack_generated_uvs.get() == 1:
+			self.pack_naively()
+		elif self.picoToolData.auto_pack_generated_uvs.get() == 2:
+			self.pack_largest_first()
+
+	def show_unwrapping_page(self):
+		self.show_page(self.mainView.uv_unwrapping_page)
 
 	def swap_uvs(self):
 		for o in self.picoToolData.picoSave.objects:
@@ -393,14 +556,410 @@ class UVToolsPage(Page):
 		# export a map of the UVs as they're currently stored in the texture!
 		# can also pass in scalars but who knows about that
 		filepath = get_associated_filename(self.picoToolData.picoSave.original_path, "_uvs", ".png")
-		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale)
+		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale, color_by_face = self.picoToolData.color_uv_setting.get() == 1)
 		uv_img.save(filepath, "png")
 		tk.messagebox.showinfo('Saved UVs','Exported UVs to "' + str(filepath) +  '"')
 
 	def show_uv_map(self):
 		# export a map of the UVs as they're currently stored in the texture!
 		# can also pass in scalars but who knows about that
-		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale)
+		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale, color_by_face = self.picoToolData.color_uv_setting.get() == 1)
+		uv_img.show()
+
+class UVExportPage(Page):
+	def __init__(self, master, mainView, picoToolData):
+		self.uv_map_scale = 1
+
+		self.master = master
+		self.mainView = mainView
+		self.picoToolData = picoToolData
+		Page.__init__(self, master)
+		self.page_name = "UV Export"
+
+
+
+		label = tk.Label(self, text="\nExport:") # to space things out!
+		label.pack(side="top", fill="both", expand=False)
+
+		self.uv_color_checkbox = tk.Checkbutton(self, text = "Color UVs with Face Color", variable = self.picoToolData.color_uv_setting,\
+				onvalue = 1, offvalue = 0)
+		self.uv_color_checkbox.pack()
+
+
+		label = tk.Label(self, text="UV Export Image Scale: (multiples of .125 below 1, or powers of 2):")
+		label.pack(side="top", fill="both", expand=False)
+
+		valCommand = (master.register(self.validate_export_scalar),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+		
+		subframe = tk.Frame(self) # to align horizontally
+		uv_export_scalar_text = tk.StringVar()
+		self.uv_export_scalar = tk.Entry(subframe, textvariable = uv_export_scalar_text, validate="all", validatecommand=valCommand)
+		self.uv_export_scalar.pack(side="left")
+		
+		self.valid_entry_label = tk.StringVar()
+		# self.valid_entry_label.set("Valid Scale") # currently set this below when I enter the default text!
+		label = tk.Label(subframe, textvariable=self.valid_entry_label)
+		label.pack(side="right", fill="both", expand=False)
+		subframe.pack(side="top")
+
+		# set the default text for that text entry. This is a terrible method but hopefully it works
+		uv_export_scalar_text.set("1")
+		self.uv_export_scalar["validate"] = "all"
+		self.valid_entry_label.set("Valid Scale")
+
+
+		self.uv_export_button_stringvar = tk.StringVar()
+		self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
+		self.export_uvs = tk.Button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
+		self.export_uvs.pack()
+
+		label = tk.Label(self, text="") # to space things out!
+		label.pack(side="top", fill="both", expand=False)
+
+
+		self.export_uvs = tk.Button(self, text = "Export Current Texture as PNG", command = self.export_texture)
+		self.export_uvs.pack()
+
+		label = tk.Label(self, text=" ") # to space things out!
+		label.pack(side="top", fill="both", expand=False)
+
+		# self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		# self.quitButton.pack()
+
+	def update_pack_buttons(self):
+		if self.picoToolData.auto_pack_generated_uvs.get() == 1:
+			self.pack_naively()
+		elif self.picoToolData.auto_pack_generated_uvs.get() == 2:
+			self.pack_largest_first()
+
+	def show_unwrapping_page(self):
+		self.show_page(self.mainView.uv_unwrapping_page)
+
+	def swap_uvs(self):
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.flip_UVs()
+
+	def unwrap_model(self):
+		# unwrap the model's faces!
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.test_create_normals(scale = 1)
+
+	def round_uvs_to_quarter_unit(self):
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.round_normals(nearest = .25)
+
+	def pack_naively(self):
+		self.picoToolData.picoSave.pack_normals_naively(padding = .5, border = .5)
+
+	def pack_largest_first(self):
+		self.picoToolData.picoSave.pack_normals_largest_first(padding = .5, border = .5)
+
+	def validate_export_scalar(self, d, i, P, s, S, v, V, W):
+		# print("IMPLEMENT THIS!!!! ") # TODO FIX THIS
+		self.valid_entry_label.set("Invalid Scale")
+		if len(P) == 0 or P == "." or P == "0." or P == "0":
+			return True
+		try:
+			f = float(P)
+			if f <= 0:
+				# print("negative")
+				return True# invalid!!!
+			elif f < 1:
+				# check to make sure it's a valid multiple of .125
+				print(f % .125)
+				if f % .125 != 0:
+					# print("not multiple of 1/8")
+					return True# not a valid multiple of 1/8!
+			elif f == 0 or f == 0.0:
+				# allowed to keep it just not allowed to use it as a scale
+				return True
+			else:
+				# make sure it's an integer if it's 1 or larger!
+				n = int(f)
+				if f != n:
+					# print("Not integer!")
+					return True# not an integer!
+				elif (n & (n-1) != 0):
+					# then it's not a power of two because it has more than one bit on!
+					return True
+
+
+			self.uv_map_scale = f
+			self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
+			self.valid_entry_label.set("Valid Scale")
+			return True
+		except:
+			# print("invalid scalar!")
+			return False
+		# print("here?")
+		return True
+
+	def return_to_tools_page(self):
+		self.show_page(self.mainView.tool_page)
+
+	def mark_save_dirty(self):
+		self.picoToolData.picoSave.dirty = True
+
+	def export_texture(self):
+		# export the texture that is currently saved in the picoCAD save file!
+		filepath = get_associated_filename(self.picoToolData.picoSave.original_path, "_texture", ".png")
+		texture_img = self.picoToolData.picoSave.export_texture()
+		texture_img.save(filepath, "png")
+		tk.messagebox.showinfo('Saved Texture','Exported Texture to "' + str(filepath) +  '"')
+
+	def export_uv_map(self):
+		# export a map of the UVs as they're currently stored in the texture!
+		# can also pass in scalars but who knows about that
+		filepath = get_associated_filename(self.picoToolData.picoSave.original_path, "_uvs", ".png")
+		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale, color_by_face = self.picoToolData.color_uv_setting.get() == 1)
+		uv_img.save(filepath, "png")
+		tk.messagebox.showinfo('Saved UVs','Exported UVs to "' + str(filepath) +  '"')
+
+	def show_uv_map(self):
+		# export a map of the UVs as they're currently stored in the texture!
+		# can also pass in scalars but who knows about that
+		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale, color_by_face = self.picoToolData.color_uv_setting.get() == 1)
+		uv_img.show()
+
+class UVUnwrappingPage(Page):
+	def __init__(self, master, mainView, picoToolData):
+		self.uv_map_scale = 1
+		self.master = master
+
+		self.mainView = mainView
+		self.picoToolData = picoToolData
+		Page.__init__(self, master)
+		self.page_name = "UVs"
+		# label = tk.Label(self, text="UV Unwrawpping Page:")
+		# label.pack(side="top", fill="both", expand=False)
+
+		label = tk.Label(self, text="First unwrap each of your meshes in this tab,\nuse the layout tab to spread them out,\nthen export them in the export tab!")
+		label.pack(side="top", fill="both", expand=False)
+
+		# select which index model to unwrap!
+		label = tk.Label(self, text="Mesh Object To Unwrap (1-# of meshes):")
+		label.pack(side="top", fill="both", expand=False)
+
+		self.mesh_to_unwrap_error_message = tk.StringVar()
+		# self.mesh_to_unwrap_error_message.set("Save file contains " + str(len(self.picoToolData.picoSave.objects)) + " meshes")
+
+		label = tk.Label(self, textvariable = self.mesh_to_unwrap_error_message)
+		label.pack(side="top", fill="both", expand=False)
+
+		self.mesh_to_unwrap_entry = FloatEntry(self, -1)
+		self.validate_mesh_number(self.mesh_to_unwrap_entry.float_value)
+		self.mesh_to_unwrap_entry.add_listener(self.validate_mesh_number)
+		self.mesh_to_unwrap_entry.only_ints = True # limit this one to integers!
+		# self.mesh_to_unwrap_entry.add_listener(lambda f: print(f))
+		self.mesh_to_unwrap_entry.pack()
+
+		label = tk.Label(self, text="UV Size Scalar:")
+		label.pack(side="top", fill="both", expand=False)
+
+		self.uv_size_scalar = FloatEntry(self, 2)
+		self.float_value = 2
+		# self.uv_size_scalar.add_listener(lambda f: print(f))
+		self.uv_size_scalar.pack()
+
+
+
+		# self.mark_dirty_button = tk.Button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
+		# self.mark_dirty_button.pack()
+
+		# now add the button to unwrap the normals as best I can! Probably should include a "scalar" button as well
+		# label = tk.Label(self, text="UV Unwrawpping Page:") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
+
+		# self.show_uvs = tk.Button(self, text = "To UV Layout Menu", command = self.show_uv_page)
+		# self.show_uvs.pack()
+
+		naive_unwrap = tk.Button(self, text = "Naive UV Unwrap Model", command = self.unwrap_model)
+		naive_unwrap.pack()
+
+		swap_uvs = tk.Button(self, text = "Swap All UVs", command = self.swap_uvs)
+		swap_uvs.pack()
+
+		round_uvs_to_quarter_unit = tk.Button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
+		round_uvs_to_quarter_unit.pack()
+
+		# # now add the button to space out the normals!
+
+		# label = tk.Label(self, text="Pack:") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
+
+		# naive_pack = tk.Button(self, text = "Pack Normals Naively", command = self.pack_naively)
+		# naive_pack.pack()
+
+		# largest_pack = tk.Button(self, text = "Pack Normals Tallest First", command = self.pack_largest_first)
+		# largest_pack.pack()
+
+		# label = tk.Label(self, text="UV Export Scale: (multiples of .125 below 1, or powers of 2):")
+		# label.pack(side="top", fill="both", expand=False)
+
+		# valCommand = (master.register(self.validate_export_scalar),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+		
+		# subframe = tk.Frame(self) # to align horizontally
+		# self.uv_export_scalar = tk.Entry(subframe, validate="all", validatecommand=valCommand)
+		# self.uv_export_scalar.pack(side="left")
+		# self.valid_entry_label = tk.StringVar()
+		# self.valid_entry_label.set("Invalid Scale")
+		# label = tk.Label(subframe, textvariable=self.valid_entry_label)
+		# label.pack(side="right", fill="both", expand=False)
+		# subframe.pack(side="top")
+
+		# self.uv_export_button_stringvar = tk.StringVar()
+		# self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
+		# self.export_uvs = tk.Button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
+		# self.export_uvs.pack()
+
+		self.show_uvs = tk.Button(self, text = "Show UVs", command = self.show_uv_map)
+		self.show_uvs.pack()
+
+		# label = tk.Label(self, text="\nTextures:") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
+
+
+		# self.export_uvs = tk.Button(self, text = "Export Current Texture as PNG", command = self.export_texture)
+		# self.export_uvs.pack()
+
+		# label = tk.Label(self, text=" ") # to space things out!
+		# label.pack(side="top", fill="both", expand=False)
+
+		# self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		# self.quitButton.pack()
+
+	def validate_mesh_number(self, f):
+		# this just sets the error message when the player enters values!
+		model_num = int(f)
+		self.mesh_to_unwrap_error_message.set("Save file contains " + str(len(self.picoToolData.picoSave.objects)) + " meshes")
+		if model_num <= 0 and model_num != -1:
+			# then debug print saying invalid index!
+			self.mesh_to_unwrap_error_message.set("Mesh number out of range! -1 or 1-" + str(len(self.picoToolData.picoSave.objects)))
+		elif model_num > len(self.picoToolData.picoSave.objects):
+			# then it's too large! you only have N models!
+			self.mesh_to_unwrap_error_message.set("Mesh number out of range! -1 or 1-" + str(len(self.picoToolData.picoSave.objects)))
+
+
+	def show_uv_page(self):
+		self.show_page(self.mainView.uv_page)
+
+	def swap_uvs(self):
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.flip_UVs()
+
+	def unwrap_model(self):
+		# unwrap the model's faces!
+		model_num = int(self.mesh_to_unwrap_entry.float_value)
+		unwrapped = False
+		self.mesh_to_unwrap_error_message.set("Save file contains " + str(len(self.picoToolData.picoSave.objects)) + " meshes")
+		if model_num == -1:
+			# then do all the objects!
+			for o in self.picoToolData.picoSave.objects:
+				for f in o.faces:
+					f.test_create_normals(scale = self.uv_size_scalar.float_value)
+					unwrapped = True
+		elif model_num > 0 and model_num <= len(self.picoToolData.picoSave.objects):
+			# then unwrap the specific model!
+			o = self.picoToolData.picoSave.objects[model_num-1]
+			for f in o.faces:
+				f.test_create_normals(scale = self.uv_size_scalar.float_value)
+				unwrapped = True
+		elif model_num <= 0:
+			# then debug print saying invalid index!
+			self.mesh_to_unwrap_error_message.set("Mesh number out of range! -1 or 1-" + str(len(self.picoToolData.picoSave.objects)))
+		else:
+			# then it's too large! you only have N models!
+			self.mesh_to_unwrap_error_message.set("Mesh number out of range! -1 or 1-" + str(len(self.picoToolData.picoSave.objects)))
+		if unwrapped:
+			# Then check if we should automatically pack the uvs!
+			if self.picoToolData.auto_pack_generated_uvs.get() == 0:
+				# don't pack
+				pass
+			elif self.picoToolData.auto_pack_generated_uvs.get() == 1:
+				self.pack_naively()
+			elif self.picoToolData.auto_pack_generated_uvs.get() == 2:
+				self.pack_largest_first()
+
+	def round_uvs_to_quarter_unit(self):
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.round_normals(nearest = .25)
+
+	def pack_naively(self):
+		self.picoToolData.picoSave.pack_normals_naively(padding = .5, border = .5)
+
+	def pack_largest_first(self):
+		self.picoToolData.picoSave.pack_normals_largest_first(padding = .5, border = .5)
+
+	def validate_export_scalar(self, d, i, P, s, S, v, V, W):
+		# print("IMPLEMENT THIS!!!! ") # TODO FIX THIS
+		self.valid_entry_label.set("Invalid Scale")
+		if len(P) == 0 or P == "." or P == "0." or P == "0":
+			return True
+		try:
+			f = float(P)
+			if f <= 0:
+				# print("negative")
+				return True# invalid!!!
+			elif f < 1:
+				# check to make sure it's a valid multiple of .125
+				print(f % .125)
+				if f % .125 != 0:
+					# print("not multiple of 1/8")
+					return True# not a valid multiple of 1/8!
+			elif f == 0 or f == 0.0:
+				# allowed to keep it just not allowed to use it as a scale
+				return True
+			else:
+				# make sure it's an integer if it's 1 or larger!
+				n = int(f)
+				if f != n:
+					# print("Not integer!")
+					return True# not an integer!
+				elif (n & (n-1) != 0):
+					# then it's not a power of two because it has more than one bit on!
+					return True
+
+
+			self.uv_map_scale = f
+			self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
+			self.valid_entry_label.set("Valid Scale")
+			return True
+		except:
+			# print("invalid scalar!")
+			return False
+		# print("here?")
+		return True
+
+	def return_to_tools_page(self):
+		self.show_page(self.mainView.tool_page)
+
+	def mark_save_dirty(self):
+		self.picoToolData.picoSave.dirty = True
+
+	def export_texture(self):
+		# export the texture that is currently saved in the picoCAD save file!
+		filepath = get_associated_filename(self.picoToolData.picoSave.original_path, "_texture", ".png")
+		texture_img = self.picoToolData.picoSave.export_texture()
+		texture_img.save(filepath, "png")
+		tk.messagebox.showinfo('Saved Texture','Exported Texture to "' + str(filepath) +  '"')
+
+	def export_uv_map(self):
+		# export a map of the UVs as they're currently stored in the texture!
+		# can also pass in scalars but who knows about that
+		filepath = get_associated_filename(self.picoToolData.picoSave.original_path, "_uvs", ".png")
+		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale, color_by_face = self.picoToolData.color_uv_setting.get() == 1)
+		uv_img.save(filepath, "png")
+		tk.messagebox.showinfo('Saved UVs','Exported UVs to "' + str(filepath) +  '"')
+
+	def show_uv_map(self):
+		# export a map of the UVs as they're currently stored in the texture!
+		# can also pass in scalars but who knows about that
+		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale, color_by_face = self.picoToolData.color_uv_setting.get() == 1)
 		uv_img.show()
 
 
@@ -415,8 +974,14 @@ class MainToolPage(Page):
 		# now make buttons and whatever!
 
 
-		self.uv_menu_button = tk.Button(self, text = "Open UV Tools Menu", command = self.open_uv_menu)
+		self.uv_menu_button = tk.Button(self, text = "Open UV Menu", command = self.open_uv_master_menu)
 		self.uv_menu_button.pack()
+
+		# self.uv_unwrapping_button = tk.Button(self, text = "Open UV Unwrapping Menu", command = self.open_uv_unwrapping_menu)
+		# self.uv_unwrapping_button.pack()
+
+		# self.uv_menu_button = tk.Button(self, text = "Open UV Layout Menu", command = self.open_uv_menu)
+		# self.uv_menu_button.pack()
 
 		self.debug_menu_button = tk.Button(self, text = "Open Debug Menu", command = self.open_debug_menu)
 		self.debug_menu_button.pack()
@@ -427,15 +992,32 @@ class MainToolPage(Page):
 		label.pack(side="top", fill="both", expand=False)
 
 
-		self.quitButton = tk.Button(self, text = "Reload File", command = self.reload_file_check_if_saved)
-		self.quitButton.pack()
+		if windows_tools_enabled:
+			self.openInPicoCadText = tk.StringVar();
+			self.openInPicoCadText.set("Open In picoCAD")
+			self.openInPicoCad = tk.Button(self, textvariable = self.openInPicoCadText, command = self.test_open_in_picoCAD)
+			self.openInPicoCad.pack()
 
-		self.quitButton = tk.Button(self, text = "Save Changes (OVERWRITE FILE)", command = self.save_overwrite)
-		self.quitButton.pack()
+		self.reloadFile = tk.Button(self, text = "Reload File", command = self.reload_file_check_if_saved)
+		self.reloadFile.pack()
+
+		self.saveChanges = tk.Button(self, text = "Save Changes (OVERWRITE FILE)", command = self.save_overwrite)
+		self.saveChanges.pack()
 		
 		self.quitButton = tk.Button(self, text = "Exit", command = self.return_to_main_page_check_if_saved)
 		self.quitButton.pack()
 		self.master = master
+
+	def test_open_in_picoCAD(self):
+		if windows_tools_enabled:
+			windows = []
+			find_picoCAD_window(windows)
+			# print(windows)
+			if len(windows) == 1:
+				self.openInPicoCadText.set("Open In picoCAD")
+				open_file_in_picoCAD_window(windows[0], self.picoToolData.picoSave.original_path)
+				return
+		self.openInPicoCadText.set("Open In picoCAD (failed to find picoCAD window)")
 
 	def open_debug_menu(self):
 		self.show_page(self.mainView.debug_page)
@@ -448,6 +1030,12 @@ class MainToolPage(Page):
 
 	def open_uv_menu(self):
 		self.show_page(self.mainView.uv_page)
+
+	def open_uv_unwrapping_menu(self):
+		self.show_page(self.mainView.uv_unwrapping_page)
+
+	def open_uv_master_menu(self):
+		self.show_page(self.mainView.uv_master_page)
 
 	def reload_file_check_if_saved(self):
 		reload_file = False
@@ -545,10 +1133,12 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 		self.main_page = IntroPage(master, self, picoToolData)
 		self.tool_page = MainToolPage(master, self, picoToolData)
 		self.debug_page = DebugToolsPage(master, self, picoToolData)
-		self.uv_page = UVToolsPage(master, self, picoToolData)
+		# self.uv_page = UVToolsPage(master, self, picoToolData)
+		# self.uv_unwrapping_page = UVUnwrappingPage(master, self, picoToolData)
+		self.uv_master_page = UVMasterPage(master, self, picoToolData)
 
-		self.pages = [self.main_page, self.tool_page, self.debug_page, self.uv_page] # need to put all the pages in this list so they initialize properly!
-
+		# self.uv_page, self.uv_unwrapping_page
+		self.pages = [self.main_page, self.tool_page, self.debug_page, self.uv_master_page] # need to put all the pages in this list so they initialize properly!
 
 		buttonframe = tk.Frame(self)
 		#buttonframe.pack(side="top", fill="x", expand=False)

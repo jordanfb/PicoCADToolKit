@@ -16,12 +16,20 @@ But that's the current goal! Once I can export a new save I can start manipulati
 I've done that!
 
 Todo:
-tool for merging objects together via overlapping vertices!
-	Consider trying to remove the hidden faces (if there are faces which are entirely made up of faces that will be merged then try removing it I guess?)
+Mesh Tools Page:
+- - [ ] tool for merging objects together via overlapping vertices!
+	- Consider trying to remove the hidden faces (if there are faces which are entirely made up of faces that will be merged then try removing it I guess?)
+- - [ ] Scale mesh
 
-Tool for merging/unmerging the uvs of a mirrored face?
-UI entry box for how to scale the uvs when generating them
-UI entry box for which object to unwrap (so that you can scale them individually)
+- - [ ] Tool for merging/unmerging the uvs of a mirrored face?
+- - [x] UI entry box for how to scale the uvs when generating them
+- - [x] UI entry box for which object to unwrap (so that you can scale them individually)
+- - [ ] Some way to better determine which mesh is which! A 3d render view? lol
+	- it does seem like I need some way to select which object/face to edit, for this and for the mesh scaling too.
+	- Turns out the best way to do this is with some sort of graphical interface, lots of buttons on the side, vaguely like CAD software?
+		- Who'd have thunk it!
+- - [ ] Rotate face normals (physically, not by swapping the vertices)
+	- needs face selection though... hmmmm.
 
 """
 

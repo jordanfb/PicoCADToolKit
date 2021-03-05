@@ -10,7 +10,7 @@ Is is useful? Maybe? Is it fun? Yes.
 import os
 # probably import some other things in order to do terrible things with spoofing dragging into the window :)))
 
-windows_enabled = False
+windows_tools_enabled = False
 
 try:
 	import win32gui
@@ -22,14 +22,15 @@ try:
 	from win32con import PAGE_READWRITE, MEM_COMMIT, PROCESS_ALL_ACCESS
 	import ctypes
 	import struct
-	windows_enabled = True
-	print("Win32gui recognized! Windows tools enabled!")
+	windows_tools_enabled = True
+	# print("Win32gui recognized! Windows tools enabled!")
 except:
-	print("If you're on windows and you want extra functionality consider installing pywin32 and ctypes via pip!")
+	pass
+	# print("If you're on windows and you want extra functionality consider installing pywin32 and ctypes via pip!")
 
 possible_picoCAD_windows = []
 
-if windows_enabled:
+if windows_tools_enabled:
 	GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
 	VirtualAllocEx = ctypes.windll.kernel32.VirtualAllocEx
 	VirtualFreeEx = ctypes.windll.kernel32.VirtualFreeEx
@@ -69,7 +70,10 @@ def get_pico_window_enum_handler(hwnd, lParam):
 	if len(possible_windows) == 1:
 		global possible_picoCAD_windows
 		possible_picoCAD_windows.append(hwnd)
-		print("Found picoCAD Window!")
+		if lParam != None:
+			lParam.append(hwnd)
+		# print(possible_picoCAD_windows)
+		# print("Found picoCAD Window!")
 	elif len(possible_windows) == 0:
 		# print("Couldn't find picoCAD Window!")
 		pass
@@ -78,10 +82,10 @@ def get_pico_window_enum_handler(hwnd, lParam):
 		print("Found multiple possible picoCAD Windows!")
 
 
-def find_picoCAD_window():
+def find_picoCAD_window(output_list = None):
 	global possible_picoCAD_windows
 	possible_picoCAD_windows = []
-	win32gui.EnumWindows(get_pico_window_enum_handler, None)
+	win32gui.EnumWindows(get_pico_window_enum_handler, output_list)
 
 def get_open_windows():
 	win32gui.EnumWindows(windows_enum_handler, None)
@@ -116,10 +120,10 @@ def open_file_in_picoCAD_window(window_hwnd, filepath):
 		# thread_id = GetWindowThreadProcessId(window_hwnd, address) #Get the process ID, so as to subsequently apply for memory in the process address space.
 		thread_id, pid = win32process.GetWindowThreadProcessId(window_hwnd)
 
-		print("pid:%x" % pid, "Thread id:", thread_id)
+		# print("pid:%x" % pid, "Thread id:", thread_id)
 	
 		hProcHnd = OpenProcess(PROCESS_ALL_ACCESS, False, pid)#Open the process and obtain the process handle.
-		print("open Process:%x" % hProcHnd)
+		# print("open Process:%x" % hProcHnd)
 	 
 		pMem = VirtualAllocEx(hProcHnd, 0, len(DropFilesInfo), MEM_COMMIT, PAGE_READWRITE) # In the target process, apply for a memory area that can accommodate DROPFILES and file paths
 
@@ -131,7 +135,7 @@ def open_file_in_picoCAD_window(window_hwnd, filepath):
 
 
 if __name__ == "__main__":
-	if windows_enabled:
+	if windows_tools_enabled:
 		# print("Windows tools enabled")
 		find_picoCAD_window()
 		test_filepath = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/output_file_test.txt"
