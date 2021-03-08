@@ -17,20 +17,32 @@ I've done that!
 
 Todo:
 Mesh Tools Page:
-- - [ ] Implement UI for:
+- - [x] Implement UI for:
 	- mesh page:
-		- - [ ] Merge overlapping vertices
+		- - [x] Merge overlapping vertices
 			- this should also now destroy hidden faces! Hopefully! I should make a checkbox for it though in the UI
-		- - [ ] Merge two meshes
-		- - [ ] Clean up invalid faces
-		- - [ ] Scale mesh
+		- - [x] Merge two meshes
+			- second drop down to select mesh to add to the first one, but it won't work with all selected.
+		- - [x] Clean up invalid faces
+			- just a button I think
+		- - [x] Scale mesh
+			- float to scale, then apply to the selected mesh
+			- consider having three different values to scale it all? This way we could also do flipping! (although there may be a bug with that?)
+			- then a toggle to scale from the center of mass vs scale by origin
+- - [x] Change mesh selection to a dropdown menu with [all][1: cube][2: pyramid] etc. as options
+- - [x] Implement UI for exporting alpha maps!
 
-- - [ ] Tool for mirroring a mesh across an axis
+
+- - [x] Tool for flipping mesh normals
+- - [x] Tool for rounding a mesh's vertices to nearest whatever the unit used .25
+- - [x] Tool for mirroring a mesh across an axis
 - - [ ] Tool for duplicating a mesh
+	- Can be done in picoCAD
 - - [ ] Tool for deleting a mesh
-	- use it to delete the mesh after you merge the above mesh! makes sense.
+	- Can be done in picoCAD (as long as it can load the file...)
+	- use it to delete the original mesh after you merge the above mesh! makes sense.
 - - [ ] Tool for separating objects if they aren't connected? Hmmmm
-	- this is only really useful if there's a way to split an edge, which I'm not sure how to make so maybe not
+	- this is only really useful if there's a way to split an edge, which I'm not sure how to make so maybe not just yet
 - - [ ] Tool for merging/unmerging the uvs of a mirrored face?
 - - [x] UI entry box for how to scale the uvs when generating them
 - - [x] UI entry box for which object to unwrap (so that you can scale them individually)
@@ -40,7 +52,64 @@ Mesh Tools Page:
 		- Who'd have thunk it!
 - - [ ] Rotate face normals (physically, not by swapping the vertices)
 	- needs face selection though... hmmmm.
+- - [ ] Consider changing around the output_save_text function of a picoSave to use the parsed header functions not the original text
+- - [ ] Stats page to show how many vertices, faces, objects, etc there are in your model!
 
+Ideas from Munro on the discord:
+a toolbox app like the exporter that did:
+- - [x] scaling,
+- - [x] flipping,
+- - [x] face inverting (althoug currently it's just mesh inverting...,
+- - [x] re-positioned origin points and other mesh related changes would be pretty useful. got some rough code to do some of it for myself but it's not user friendly.
+	- - [x] manual enter three floats to move it by
+	- - [x] Move it to the average position of the vertices
+	- - [x] Calculate the world bounding box of the object and then put a dropdown to move it to one of those points
+	- This is probably going to require its own tab because there's no way this'll fit...
+
+- - [x] Ability to move objects into a different file so that you can focus on editing a single object then combine them later
+	- only really needs a second file selection box, then it copies all the objects in that file into the main loaded file
+	- the user can duplicate files themselves and delete the extra models (and use the backup button to do so as well!)
+
+Current Changelog:
+- Implemented exporting alpha map for use with 3rd party programs
+- Improved mesh selection method from entering a string to a dropdown menu.
+	- like improved it _a lot_ it's so much better now
+- Merge vertices based distance and (optionally) remove the faces that become hidden
+- Added a confirmation dialogue for the close window button if your save data isn't saved
+- Scale meshes by x, y, and z independently!
+	- This is currently relative to the origin of the object, not the midpoint! keep that in mind!
+	- You can move the origin to the midpoint (or anywhere else!) and then scale it how you want it to by adjusting the origin!
+- Scale mesh positions by x, y, and z independently!
+	- Same deal, this is relative to the world origin!
+- Invert normals on a mesh (you'll need to do this if you scale a mesh by -1 on a dimension!)
+- Button to remove invalid faces with 2 or fewer unique vertices!
+- Round vertices to nearest .25 (i.e. the snapping grid in picoCAD)
+- Copy an object's vertices and faces into another object!
+	- it won't delete the original, but if you want to you can do that manually in picoCAD!
+	- I reccomend merging meshes and then removing duplicate vertices to clean it up!
+- Save a copy of the open data to a backup file
+	- Save what is currently opened (not what is currently saved!) to a new file. Keep editing the original.
+- Changed the backup button so that when the backups are opened in picoCAD they will save to their backup filepaths, not to the original file
+	- This is helpful because of the next feature I added:
+- Merge a save file into your current project!
+	- One issue I was having with my large projects was accessing models behind other models! This feature means that you can
+	save a copy of the project you're working on, delete everything except what you want to hide in the original,
+	go back to the original and delete what you want to hide, work on whatever you want, then merge the hidden objects back
+	into your main project! It's a little finnicky but it also helps with performance while you're editing other objects!
+	- PLEASE MAKE A BACKUP IF YOU'RE GOING TO DELETE THINGS OR MERGE FILES. IF YOU MERGE TOO MANY OBJECTS BACK INTO A PROJECT
+	IT CAN PREVENT PICOCAD FROM OPENING THE FILE IF THE FILE BECOMES TOO LARGE. PLEASE TAKE CAUTION.
+- Object Origin Adjustment!
+	- If an object isn't rotating the way you want it to, (or if you want to scale a shape differently!) you can adjust the object origin!
+	- This will keep all the vertices in place and just move the origin (the red dot in picoCAD)
+	- There are options to:
+		- Adjust it manually
+		- Adjust it to the world origin <0,0,0>
+		- Adjust it to the average position of the vertices in the object
+		- Adjust it to any one of 27 points on the world aligned bounding box of your mesh
+		- And round it to the nearest .25 unit if you so desire so it snaps nicely in the grid
+
+As always, and especially now that you can edit meshes and files more directly with my tool PLEASE MAKE A BACKUP I BEG YOU.
+Make like 70 backups. My "backup file" button won't overwrite any existing file, so use it all you want! PLEASE DO.
 """
 
 
@@ -113,7 +182,9 @@ class PicoFace:
 
 	def copy(self):
 		# return a copy!
-		return PicoFace(self.obj, self.vertices, self.uvs, self.color, self.doublesided, self.notshaded, self.priority, self.nottextured)
+		newVertices = [v for v in self.vertices]
+		newUVs = [uv.copy() for uv in self.uvs]
+		return PicoFace(self.obj, newVertices, newUVs, self.color, self.doublesided, self.notshaded, self.priority, self.nottextured)
 
 	def __str__(self):
 		t = "F: vertices: " + ", ".join([str(x) for x in self.vertices]) + ", uvs: " + ", ".join([str(x) for x in self.uvs]) + ",\t\tc=" + str(self.color)
@@ -342,22 +413,132 @@ class PicoFace:
 		return True
 		# is_coplanar()
 
+	def flip_normals(self):
+		# swap the order of the vertices and the order of the UVs and it'll be flipped! (or it should be!)
+		self.vertices.reverse()
+		self.uvs.reverse()
+		self.dirty = True
+
 
 class PicoObject:
-	def __init__(self, objText):
+	def __init__(self, obj_or_Text):
 		# vertices
 		# faces
-		self.parse_base_info(objText)
-		self.parse_vertices(objText)
-		self.parse_faces(objText)
+		if type(obj_or_Text) == PicoObject:
+			# then initialize this one by copying all the values in that one.
+			# copy base info
+			self.name = obj_or_Text.name
+			self.pos = obj_or_Text.pos.copy()
+			self.rot = obj_or_Text.rot.copy()
+			# copy vertices
+			self.vertices = [v.copy() for v in obj_or_Text.vertices]
+			# copy faces
+			self.faces = [f.copy() for f in obj_or_Text.faces]
+			for f in self.faces:
+				f.obj = self # make sure they know that I'm their new container!
+			self.dirty = True # probably should count this as dirty... hmmm
+			return
+		# otherwise we're importing from the raw text!
+		self.parse_base_info(obj_or_Text)
+		self.parse_vertices(obj_or_Text)
+		self.parse_faces(obj_or_Text)
 		# self.debug_print()
-		# self.scale_up(2)
+		# self.scale_uniform(2)
 		self.dirty = False
 
-	def scale_up(self, scalar):
+	def copy(self):
+		# return a new picoObject. It'll be a bit janky
+		return PicoObject(self) # pass in yourself to be copied
+
+	def scale_uniform(self, scalar):
 		for i in range(len(self.vertices)):
 			for j in range(len(self.vertices[i])):
 				self.vertices[i][j] = self.vertices[i][j] * scalar
+		self.dirty = True
+
+	def scale(self, x, y, z):
+		for i in range(len(self.vertices)):
+			self.vertices[i][0] = self.vertices[i][0] * x
+			self.vertices[i][1] = self.vertices[i][1] * y
+			self.vertices[i][2] = self.vertices[i][2] * z
+		self.dirty = True
+
+	def scale_position(self, x, y, z):
+		self.pos[0] *= x
+		self.pos[1] *= y
+		self.pos[2] *= z
+		self.dirty = True
+
+	def get_average_local_vertex_position(self):
+		# return the average position!
+		avg = SimpleVector(0, 0, 0)
+		if len(self.vertices) == 0:
+			return avg # can't make that an average, that's for sure!
+		for v in self.vertices:
+			avg += v
+		return avg / len(self.vertices)
+
+	def get_average_world_vertex_position(self):
+		# return the average position!
+		local = self.get_average_local_vertex_position()
+		return self.transform_point_to_world_pos(local)
+
+	def get_local_bounding_box(self):
+		# return min and max of the vertex coords!
+		if len(self.vertices) == 0:
+			return SimpleVector(0, 0, 0), SimpleVector(0, 0, 0)
+		minimum = minimum_values_in_list_of_simpleVectors(self.vertices)
+		maximum = maximum_values_in_list_of_simpleVectors(self.vertices)
+		return minimum, maximum
+
+	def get_world_bounding_box(self):
+		minimum, maximum = self.get_local_bounding_box()
+		minimum = self.transform_point_to_world_pos(minimum)
+		maximum = self.transform_point_to_world_pos(maximum)
+		return minimum, maximum
+
+	def transform_point_to_world_pos(self, v):
+		this_position_mat = self.get_position_matrix()
+		return v.mat_mult(this_position_mat)
+
+	def transform_point_to_local_pos(self, v):
+		this_position_mat = self.get_inverse_position_matrix()
+		return v.mat_mult(this_position_mat)
+
+	def move_origin_to_local_position(self, local_pos):
+		# just convert the local pos to world pos and then move to there
+		world_pos = self.transform_point_to_world_pos(local_pos)
+		self.move_origin_to_world_position(world_pos)
+
+	def move_origin_to_world_position(self, worldPos):
+		# move the origin to a new world position! That means you need to calculate all the vertices in worldspace, 
+		# move the pos, then inverse the positions and store those!
+		world_pos_vertices = []
+		this_position_mat = self.get_position_matrix()
+
+		for v in self.vertices:
+			transformed = v.mat_mult(this_position_mat)
+			world_pos_vertices.append(transformed)
+
+		self.pos = SimpleVector(worldPos)
+		new_inverse_mat = self.get_inverse_position_matrix()
+
+		new_local_vertices = []
+		for v in world_pos_vertices:
+			transformed = v.mat_mult(new_inverse_mat)
+			new_local_vertices.append(transformed)
+		self.vertices = new_local_vertices
+		self.dirty = True
+
+	def flip_normals(self):
+		for f in self.faces:
+			f.flip_normals()
+		self.dirty = True
+
+	def round_vertices(self, nearest):
+		for v in self.vertices:
+			v.round_to_nearest(nearest)
+		self.dirty = True
 
 	def is_dirty(self):
 		# return whether any faces are dirty!
@@ -369,15 +550,15 @@ class PicoObject:
 		return False
 
 	def get_position_matrix(self):
-		return [[1, 0, 0, self.pos.x],\
-				[0, 1, 0, self.pos.y],\
-				[0, 0, 1, self.pos.z],\
+		return [[1, 0, 0, self.pos[0]],\
+				[0, 1, 0, self.pos[1]],\
+				[0, 0, 1, self.pos[2]],\
 				[0, 0, 0, 1]]
 
 	def get_inverse_position_matrix(self):
-		return [[1, 0, 0, -self.pos.x],\
-				[0, 1, 0, -self.pos.y],\
-				[0, 0, 1, -self.pos.z],\
+		return [[1, 0, 0, -self.pos[0]],\
+				[0, 1, 0, -self.pos[1]],\
+				[0, 0, 1, -self.pos[2]],\
 				[0, 0, 0, 1]]
 
 	def merge_overlapping_vertices(self, distance = 0, remove_hidden_faces = True):
@@ -390,7 +571,7 @@ class PicoObject:
 			for j in range(i+1, len(self.vertices)):
 				# check to see if they're matching!
 				magnitude = (self.vertices[i] - self.vertices[j]).magnitude()
-				if magnitude < distance:
+				if magnitude <= distance:
 					# then mark them to be merged!
 					to_be_removed.append(j)
 					to_be_merged.append(j)
@@ -404,9 +585,9 @@ class PicoObject:
 					f.vertices[i] = overlapping[f.vertices[i]-1] + 1 # have to convert between lua's 1 indexing and python's 0
 					f.dirty = True
 
+		remove_faces = []
 		if remove_hidden_faces:
 			# if a face is made up entirely of vertices that are being merged with a different vertex then remove it!
-			remove_faces = []
 			for f in self.faces:
 				covered = True
 				for v in f.vertices:
@@ -420,7 +601,7 @@ class PicoObject:
 			# now remove all the faces that are covered!
 			for f in remove_faces:
 				self.faces.remove(f)
-		return len(to_be_removed)
+		return len(to_be_removed), len(remove_faces)
 
 	def remove_invalid_faces(self):
 		# loop over the faces and figure out if we should remove some because they have two or fewer unique vertices!
@@ -439,6 +620,7 @@ class PicoObject:
 				self.dirty = True
 		for f in to_remove:
 			self.faces.remove(f)
+		return len(to_remove)
 
 	def combine_other_object(self, other):
 		# add all the vertices/faces from that object into this one!
@@ -446,8 +628,8 @@ class PicoObject:
 		# add all the vertices from the other object
 		# make a matrix to transform it from this position to that position!
 		# need to adjust the vertex positions!
-		this_inverse_pos_mat = self.get_position_matrix()
-		other_pos_mat = other.get_inverse_position_matrix()
+		this_inverse_pos_mat = self.get_inverse_position_matrix()
+		other_pos_mat = other.get_position_matrix()
 
 		for v in other.vertices:
 			transformed = v.mat_mult(other_pos_mat)
@@ -459,10 +641,9 @@ class PicoObject:
 			newFace = f.copy()
 			newFace.obj = self
 			newFace.dirty = True
-			newFace.vertices = [x + vertex_offset for x in newface.vertices]
+			newFace.vertices = [x + vertex_offset for x in newFace.vertices]
 			self.faces.append(newFace)
 		self.dirty = True
-
 
 	def mark_clean(self):
 		self.dirty = False
@@ -478,12 +659,12 @@ class PicoObject:
 		# parse pos
 		postext = get_sub_table(obj_text, "pos=")[0]
 		postext = postext[1:-1] # cut off the {}
-		self.pos = [float(s) for s in postext.split(',')]
+		self.pos = SimpleVector([float(s) for s in postext.split(',')])
 
 		# parse rot
 		rottext = get_sub_table(obj_text, "rot=")[0]
 		rottext = rottext[1:-1] # cut off the {}
-		self.rot = [float(s) for s in rottext.split(',')]
+		self.rot = SimpleVector([float(s) for s in rottext.split(',')])
 
 	def parse_vertices(self, obj_text):
 		verticestext = get_sub_table(obj_text, "v={")
@@ -558,13 +739,31 @@ class PicoSave:
 		self.original_text = original_text
 		self.objects = objects
 		self.header = original_text.split("\n")[0] # the first line!
+		self.parse_header(self.header)
 		self.footer = "%" + original_text.split("%")[1]
 		self.dirty = False
 		self.original_path = filepath
 
+	def parse_header(self, header):
+		# identifier;filename;zoomlevel;bgcolor;alphacolor
+		lineInfo = header.strip().split(";")
+		self.identifier = lineInfo[0]
+		self.filename = lineInfo[1]
+		self.zoomlevel = lineInfo[2]
+		self.bgcolor = lineInfo[3]
+		self.alphacolor = lineInfo[4]
+		try:
+			# parsing the zoom, bg, and alphacolor
+			self.bgcolor = int(self.bgcolor)
+			self.alphacolor = int(self.alphacolor)
+			self.zoomlevel = int(self.zoomlevel)
+		except:
+			print("Error parsing header values! Left values as strings")
+
 	def output_save_text(self, save_file_name):
 		header = self.header.split(";")
 		header = [header[0]] + [save_file_name] + header[2:]
+		# I probably should use the parsed values from the parse_header function but for now this works
 		header = ";".join(header)
 		o = header + "\n{"
 		for obj in self.objects:
@@ -572,6 +771,16 @@ class PicoSave:
 		o = o[:-1] # get rid of last comma
 		o += "\n}" + self.footer
 		return o
+
+	def get_mesh_objects(self, id_or_negative_one):
+		# pass in -1 or 1,2,3,4,5 etc. and this will return a list of the objects!
+		# this is useful for operating on only a subsection of meshes!
+		if id_or_negative_one == -1:
+			return [x for x in self.objects]
+		i = id_or_negative_one -1
+		if i >= 0 and i < len(self.objects):
+			return [self.objects[i]]
+		return [] # invalid selection!
 
 	def pack_normals_naively(self, padding = .5, border = .5):
 		self.dirty = True
@@ -705,6 +914,28 @@ class PicoSave:
 			y += 1
 		return img
 
+	def export_alpha_map(self):
+		img = Image.new("RGBA", (128, 128), (255, 255, 255))
+		img_string = self.footer[1:] # remove the % sign
+		y = 0
+		for line in img_string.split("\n"):
+			line = line.strip()
+			if len(line) != 128:
+				# print("Error line is too short!: '" + str(line) + "'")
+				continue
+			for x in range(len(line)):
+				c = line[x]
+				i = "0123456789abcdef".find(c)
+				if i == -1:
+					print("Couldn't find color for: '" + str(c) + "'")
+					continue
+				color = (255, 255, 255)
+				if i == self.alphacolor:
+					color = (0, 0, 0) # then it's transparent!
+				img.putpixel((x, y), color)
+			y += 1
+		return img
+
 	def make_UV_image(self, scale = 1, color_by_face = False):
 		pixelScale = 8 * scale # default picoCAD is 8, can this be changed? no clue, so putting this here
 		# you can now pass in a scalar so that if you wanted a larger texture like a 512x512 texture (so that you can make the textures more detailed) you can!
@@ -792,6 +1023,13 @@ class SimpleVector:
 		x = self.x * scalar
 		y = self.y * scalar
 		z = self.z * scalar
+		return SimpleVector(x, y, z)
+
+	def component_multiplication(self, vector):
+		# can only multiply by a vector, multiply x by x, y by y, z by z
+		x = self.x * vector[0]
+		y = self.y * vector[1]
+		z = self.z * vector[2]
 		return SimpleVector(x, y, z)
 
 	def round_to_nearest(self, nearest):
