@@ -71,6 +71,7 @@ a toolbox app like the exporter that did:
 	- the user can duplicate files themselves and delete the extra models (and use the backup button to do so as well!)
 
 Current Changelog:
+v0.2: The Mesh Update
 - Implemented exporting alpha map for use with 3rd party programs
 - Improved mesh selection method from entering a string to a dropdown menu.
 	- like improved it _a lot_ it's so much better now
@@ -110,6 +111,14 @@ Current Changelog:
 
 As always, and especially now that you can edit meshes and files more directly with my tool PLEASE MAKE A BACKUP I BEG YOU.
 Make like 70 backups. My "backup file" button won't overwrite any existing file, so use it all you want! PLEASE DO.
+
+
+v0.3: The Graphics Update
+- Added displays for each of the orthogonal picoCAD Orientations to see which object(s) you are editing
+- Added a display for the UV map so that you don't have to keep clicking "Show UVs"
+- Added controls for those as well (arrow keys, wasd, +-, scroll wheel, and on screen buttons)
+- Added border and padding fields for customizing how spaced out the automatically packed UVs are!
+- Removed the ugly image of the coordinate system and replaced it with text that appears on the render views when you hover over them
 """
 
 
@@ -1025,6 +1034,9 @@ class SimpleVector:
 		z = self.z * scalar
 		return SimpleVector(x, y, z)
 
+	def __neg__(self):
+		return SimpleVector(-self.x, -self.y, -self.z)
+
 	def component_multiplication(self, vector):
 		# can only multiply by a vector, multiply x by x, y by y, z by z
 		x = self.x * vector[0]
@@ -1127,6 +1139,31 @@ def maximum_values_in_list_of_simpleVectors(list_of_simpleVectors):
 		t.y = max(t.y, v.y)
 		t.z = max(t.z, v.z)
 	return t
+
+def multiply_matrices(m1, m2):
+	# multiply these two matrices together! This is useful for making viewing transformations!
+	# this assumes 4x4 matrices because we're doing viewing matrices!
+	output = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]]
+	for y in range(len(m1)):
+		for x in range(len(m1[0])):
+			# multiply them!
+			row = SimpleVector(m1[y][0], m1[y][1], m1[y][2])
+			col = SimpleVector(m2[0][x], m2[1][x], m2[2][x])
+			dot = row.dot(col) + m1[y][3] * m2[3][x]
+			output[y][x] = dot
+	return output
+
+def make_identity_matrix():
+	output = [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]
+	return output
+
+def make_scale_matrix(scale):
+	output = [[scale,0,0,0], [0,scale,0,0], [0,0,scale,0], [0,0,0,1]]
+	return output
+
+def make_offset_matrix(delt_pos):
+	output = [[1,0,0,delt_pos[0]], [0,1,0,delt_pos[1]], [0,0,1,delt_pos[2]], [0,0,0,1]]
+	return output
 
 def load_picoCAD_save(filepath):
 	if os.path.exists(filepath):
@@ -1294,6 +1331,7 @@ def equation_plane(x1, y1, z1, x2, y2, z2, x3, y3, z3, x, y, z):
 	# checking if the 4th point satisfies 
 	# the above equation 
 	return a * x + b * y + c * z + d == 0
+
 
 
 # if __name__ == "__main__":

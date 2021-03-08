@@ -75,23 +75,30 @@ class PicoToolData:
 		self.color_uv_setting = tk.IntVar()
 		self.color_uv_setting.set(1)
 		self.selected_mesh_index = -1
+		self.render_origins = tk.IntVar() # 0 is no, 1 is yes
+		self.render_origins.set(1)
+		self.uv_border = .5
+		self.uv_padding = .5
 
 		self.picoSaveChangeListeners = []
 		# for when the picoSave gets changed or the objects inside get changed!
 		# This way I can update the UI
 		self.selectedMeshListener = [] # for when the selected mesh gets updated! Pass in floats!
+		self.updateRenderListeners = [] # pass in myself! That way they can check zoom settings or whatever? I guess?
 
-
-		# for debug testing! This makes it much easier for me!
-		self.filename = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/output_file_test.txt"
-		self.set_filepath(self.filename)
-		if not self.valid_save:
-			self.filename = ""
+		self.only_render_selected_objects = True
 
 	def get_selected_mesh_objects(self):
 		if self.picoSave == None:
 			return []
 		return self.picoSave.get_mesh_objects(self.selected_mesh_index)
+
+	def get_objects_to_render(self):
+		if self.picoSave == None:
+			return []
+		if self.only_render_selected_objects:
+			return self.get_selected_mesh_objects()
+		return self.picoSave.get_mesh_objects(-1) # get all the objects!
 		
 	def set_filepath(self, path):
 		self.filename = path
@@ -99,7 +106,7 @@ class PicoToolData:
 		try:
 			self.picoSave, valid = load_picoCAD_save(path)
 			self.valid_save = valid
-		except:
+		except Exception as e:
 			# print("Error loading pico save!")
 			self.valid_save = False
 		self.notify_picoSave_listeners() # I guess do this here? The listeners have to be capable of accepting None as a save
@@ -109,10 +116,12 @@ class PicoToolData:
 		if mesh_or_negative_one == -1:
 			self.selected_mesh_index = mesh_or_negative_one
 			self.notify_selected_mesh_listeners()
+			self.notify_update_render_listeners()
 			return
 		if self.picoSave != None and mesh_or_negative_one > 0 and mesh_or_negative_one < len(self.picoSave.objects)+1:
 			self.selected_mesh_index = mesh_or_negative_one
 			self.notify_selected_mesh_listeners()
+			self.notify_update_render_listeners()
 			return
 		print("Error: Tried to set invalid mesh index: " + str(mesh_or_negative_one))
 
@@ -135,6 +144,13 @@ class PicoToolData:
 	def notify_selected_mesh_listeners(self):
 		for f in self.selectedMeshListener:
 			f(self.selected_mesh_index)
+
+	def add_update_render_listener(self, listener):
+		self.updateRenderListeners.append(listener)
+
+	def notify_update_render_listeners(self):
+		for f in self.updateRenderListeners:
+			f(self)
 
 
 class Page(tk.Frame):
@@ -198,6 +214,169 @@ class BigImagePage(Page):
 		self.axescanvas.itemconfig(self.canvas_image_id, image=self.pico_axes_image)
 		self.axescanvas.coords(self.canvas_image_id, x, y)
 
+
+
+class MeshDisplayCanvas(tk.Canvas):
+	def __init__(self, master, picoToolData, *args, **kwargs):
+		# this is for making a canvas that will update itself when it needs to!
+		self.view_matrix = make_identity_matrix()
+		self.projection_list = [self.view_matrix]
+		self.picoSave = None
+		self.master = master
+		self.picoToolData = picoToolData
+		self.render_mesh = True
+		tk.Canvas.__init__(self, master, *args, **kwargs)
+		# self.axescanvas = tk.Canvas(self.axes_frame, width = 100, height = 100, cursor="hand2")
+		self.axes_text_ids = []
+		self.axes_labels = ["","","",""]
+		self.display_axes = False
+
+	def update_picoSave_to_render(self, picoSave):
+		self.picoSave = picoSave
+		# this will always be followed by an "update selected objects" notification so I don't have to do anything here
+
+	def update_selected_objects(self, i):
+		# ignore the parameter just use this to update which objects are being rendered!
+		self.update_render()
+
+	def update_render_listener(self, picoToolData):
+		self.update_render() # possibly check for things like zoom updates and whatever but for now we're handling that elsewhere
+
+	def update_render(self):
+		if self.render_mesh:
+			self.update_mesh_render()
+		else:
+			self.update_uv_render()
+		if self.display_axes:
+			self.create_axes_labels()
+
+	def set_axes_labels(self, right, left, up, down):
+		self.axes_labels = [right, left, up, down]
+
+	def delete_axes_labels(self):
+		for i in self.axes_text_ids:
+			self.delete(i)
+		self.axes_text_ids = []
+
+	def create_axes_labels(self):
+		self.delete_axes_labels()
+		self.axes_text_ids.append(self.create_text(200, 100, text = self.axes_labels[0], anchor="e"))
+		self.axes_text_ids.append(self.create_text(0, 100, text = self.axes_labels[1], anchor="w"))
+		self.axes_text_ids.append(self.create_text(100, 0, text = self.axes_labels[2], anchor="n"))
+		self.axes_text_ids.append(self.create_text(100, 200, text = self.axes_labels[3], anchor="s"))
+
+	def initialize_arrow_key_controls(self, right_direction, up_direction, scale, update_matrix_function, update_zoom_function):
+		self.update_matrix_function = update_matrix_function
+		self.update_zoom_function = update_zoom_function
+		self.bind("<Right>", lambda e: self.update_coordinate_position(right_direction * scale))
+		self.bind("<Left>", lambda e: self.update_coordinate_position(-right_direction * scale))
+		self.bind("<Up>", lambda e: self.update_coordinate_position(up_direction * scale))
+		self.bind("<Down>", lambda e: self.update_coordinate_position(-up_direction * scale))
+		self.bind("<d>", lambda e: self.update_coordinate_position(right_direction * scale))
+		self.bind("<a>", lambda e: self.update_coordinate_position(-right_direction * scale))
+		self.bind("<w>", lambda e: self.update_coordinate_position(up_direction * scale))
+		self.bind("<s>", lambda e: self.update_coordinate_position(-up_direction * scale))
+		self.bind("<equal>", lambda e: self.update_zoom(2))
+		self.bind("<minus>", lambda e: self.update_zoom(.5))
+		self.bind("<MouseWheel>", self.scroll_wheel_zoom)
+		self.bind("<Enter>", self.focus)
+		self.bind("<Leave>", self.lost_focus)
+
+	def scroll_wheel_zoom(self, event):
+	    if event.delta > 0:
+	    	self.update_zoom(2)
+	    else:
+	    	self.update_zoom(.5)
+	    return "break" 
+
+	def update_coordinate_position(self, delta):
+		self.picoToolData.projection_coords += delta
+		self.update_matrix_function() # invoke this so that it'll update all of us with the right matrices!
+		self.picoToolData.notify_update_render_listeners()
+
+	def update_zoom(self, scalar):
+		self.picoToolData.zoom *= scalar
+		self.update_zoom_function() # invoke this so that it'll update all of us with the right matrices!
+		self.picoToolData.notify_update_render_listeners()
+
+	def focus(self, event):
+		self.focus_set()
+		self.display_axes = True
+		self.create_axes_labels()
+
+	def lost_focus(self, event):
+		self.display_axes = False
+		self.delete_axes_labels()
+
+	def update_mesh_render(self):
+		objs = self.picoToolData.get_objects_to_render()
+		self.delete("all") # probably worth making an object pool but for now this works
+		for o in objs:
+			transformed_vertices = [None] + [x.mat_mult(o.get_position_matrix()).mat_mult(self.view_matrix) for x in o.vertices]
+			# print(transformed_vertices)
+			for f in o.faces:
+				# go through the vertices and render each edge!
+				color = "#000000"
+				if self.picoToolData.color_uv_setting.get() == 1:
+					# then color it with the face color!
+					color = from_rgb(colors[f.color])
+
+				for i in range(len(f.vertices)):
+					# draw the line!
+					v1 = transformed_vertices[f.vertices[i]]
+					v2 = transformed_vertices[f.vertices[(i+1) % len(f.vertices)]]
+					# print("Creating line:", v1, " to ", v2)
+					line = self.create_line(v1.x, v1.y, v2.x, v2.y, fill=color)
+			if self.picoToolData.render_origins.get() == 1:
+				# draw the origin in red!
+				color = "#ff0000"
+				transformed_origin = o.pos.mat_mult(self.view_matrix)
+				# self.create_line(transformed_origin.x, transformed_origin.y, transformed_origin.x+1, transformed_origin.y, fill=color)
+				size = 2
+				self.create_oval(transformed_origin.x-size, transformed_origin.y-size, transformed_origin.x+size, transformed_origin.y+size, fill = color)
+
+	def update_uv_render(self):
+		objs = self.picoToolData.get_objects_to_render()
+		self.delete("all") # probably worth making an object pool but for now this works
+		for o in objs:
+			for f in o.faces:
+				transformed_uvs = [x.mat_mult(self.view_matrix) for x in f.uvs]
+				# go through the vertices and render each edge!
+				color = "#000000"
+				if self.picoToolData.color_uv_setting.get() == 1:
+					# then color it with the face color!
+					color = from_rgb(colors[f.color])
+
+				for i in range(len(f.vertices)):
+					# draw the line!
+					v1 = transformed_uvs[i]
+					v2 = transformed_uvs[(i+1) % len(f.vertices)]
+					# print("Creating line:", v1, " to ", v2)
+					line = self.create_line(v1.x, v1.y, v2.x, v2.y, fill=color)
+		corners = [SimpleVector(0, 0, 0), SimpleVector(128/8, 0, 0), SimpleVector(128/8, 120/8, 0), SimpleVector(0, 120/8, 0)]
+		corners = [x.mat_mult(self.view_matrix) for x in corners]
+		for i in range(len(corners)):
+			v1 = corners[i]
+			v2 = corners[(i+1) % len(corners)]
+			line = self.create_line(v1.x, v1.y, v2.x, v2.y, fill="#000000")
+
+
+	def calculate_full_projection_matrix(self):
+		self.view_matrix = make_identity_matrix()
+		for m in self.projection_list:
+			self.view_matrix = multiply_matrices(self.view_matrix, m)
+
+	def set_projection_list(self, full_list):
+		self.projection_list = full_list
+		self.calculate_full_projection_matrix()
+
+	def set_projection(self, index, matrix):
+		# project all the 3D vertices onto an X, Y plane and that's what gets displayed!
+		if index >= len(self.projection_list):
+			return # this is currently just for the projection view just since that isn't implemented
+		self.projection_list[index] = matrix
+		self.calculate_full_projection_matrix()
+		self.update_render()
 
 
 class IntroPage(Page):
@@ -462,19 +641,19 @@ class MeshEditingMaster(Page):
 		self.picoToolData.add_selected_mesh_listener(self.mesh_to_unwrap_entry.set_selection_index)
 		# so that when the mesh is updated this will be updated too!
 
-		self.axescanvas = tk.Canvas(self.axes_frame, width = 100, height = 100, cursor="hand2")
-		self.axescanvas.bind("<Button-1>", self.view_fullscreen_axes_image)
-		self.axescanvas.pack()
-		self.pico_axes_image = None
-		self.pico_axes_raw_image = None
-		if getattr(sys, 'frozen', False):
-			self.axes_raw_image = Image.open(os.path.join(sys._MEIPASS, "files/picoCADAxes.png"))
-		else:
-			self.axes_raw_image = Image.open("files/picoCADAxes.png")
-		# resize it to fit on the canvas
-		self.axes_raw_image = self.axes_raw_image.resize((100, 100))
-		self.pico_axes_image = ImageTk.PhotoImage(self.axes_raw_image)
-		self.axescanvas.create_image(0, 0, anchor="nw", image=self.pico_axes_image)
+		# self.axescanvas = tk.Canvas(self.axes_frame, width = 100, height = 100, cursor="hand2")
+		# self.axescanvas.bind("<Button-1>", self.view_fullscreen_axes_image)
+		# self.axescanvas.pack()
+		# self.pico_axes_image = None
+		# self.pico_axes_raw_image = None
+		# if getattr(sys, 'frozen', False):
+		# 	self.axes_raw_image = Image.open(os.path.join(sys._MEIPASS, "files/picoCADAxes.png"))
+		# else:
+		# 	self.axes_raw_image = Image.open("files/picoCADAxes.png")
+		# # resize it to fit on the canvas
+		# self.axes_raw_image = self.axes_raw_image.resize((100, 100))
+		# self.pico_axes_image = ImageTk.PhotoImage(self.axes_raw_image)
+		# self.axescanvas.create_image(0, 0, anchor="nw", image=self.pico_axes_image)
 
 
 
@@ -620,7 +799,7 @@ class MeshEditingMaster(Page):
 		# then the options for bounding box based settings
 		# now we need to make the dropdown for moving it to a specific portion of the bounding box!
 		# what options do we have? on a 2D bounding box we'd have center, 4 corners, and 4 edge centers.
-		self.bounding_box_x_options = [("Right (-X)", -1), ("Center (0)", 0), ("Left (+X)", 1)]
+		self.bounding_box_x_options = [("Right (+X)", 1), ("Center (0)", 0), ("Left (-X)", -1)]
 		self.bounding_box_y_options = [("Up (-Y)", -1), ("Center (0)", 0), ("Down (+Y)", 1)]
 		self.bounding_box_z_options = [("Forwards (+Z)", 1), ("Center (0)", 0), ("Backwards (-Z)", -1)]
 		# top left window shows the +Z as right, +X as down
@@ -668,17 +847,20 @@ class MeshEditingMaster(Page):
 		z = self.z_origin_entry.float_value
 		for o in objs:
 			o.move_origin_to_local_position(SimpleVector(x, y, z))
+		self.picoToolData.notify_update_render_listeners()
 
 	def move_origin_to_average_pos(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for o in objs:
 			average_pos = o.get_average_world_vertex_position()
 			o.move_origin_to_world_position(average_pos)
+		self.picoToolData.notify_update_render_listeners()
 
 	def move_origin_to_world_origin(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for o in objs:
 			o.move_origin_to_world_position(SimpleVector(0, 0, 0))
+		self.picoToolData.notify_update_render_listeners()
 
 	def move_to_world_bounding_box(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
@@ -692,12 +874,14 @@ class MeshEditingMaster(Page):
 			mid_point = minimum + radius
 			offset = radius.component_multiplication(bounding_box_position)
 			o.move_origin_to_world_position(mid_point + offset)
+		self.picoToolData.notify_update_render_listeners()
 
 	def round_origin_to_nearest_25(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for o in objs:
 			rounded = o.pos.round_to_nearest(.25)
 			o.move_origin_to_world_position(rounded)
+		self.picoToolData.notify_update_render_listeners()
 
 	def merge_mesh(self):
 		if self.picoToolData.selected_mesh_index == -1:
@@ -707,6 +891,7 @@ class MeshEditingMaster(Page):
 			objs = self.picoToolData.get_selected_mesh_objects()
 			for copy_into in objs:
 				copy_into.combine_other_object(self.picoToolData.picoSave.objects[self.mesh_to_copy_from_dropdown.output_int - 1])
+		self.picoToolData.notify_update_render_listeners()
 
 	def return_to_tools_page(self):
 		self.show_page(self.mainView.tool_page)
@@ -720,6 +905,7 @@ class MeshEditingMaster(Page):
 		for o in objs:
 			# scale the objects!
 			o.scale(x, y, z)
+		self.picoToolData.notify_update_render_listeners()
 
 	def scale_object_position(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
@@ -730,16 +916,19 @@ class MeshEditingMaster(Page):
 		for o in objs:
 			# scale the objects!
 			o.scale_position(x, y, z)
+		self.picoToolData.notify_update_render_listeners()
 
 	def invert_normals(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for o in objs:
 			o.flip_normals() # this does it by flipping the order of the vertices (and also the UVs!)
+		self.picoToolData.notify_update_render_listeners()
 
 	def round_vertices(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for o in objs:
 			o.round_vertices(.25) # this does it by flipping the order of the vertices (and also the UVs!)
+		self.picoToolData.notify_update_render_listeners()
 
 	def remove_invalid_faces(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
@@ -747,6 +936,7 @@ class MeshEditingMaster(Page):
 		for o in objs:
 			f += o.remove_invalid_faces()
 		print("Removed " + str(f) + " faces")
+		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
 
 	def merge_overlapping_verts(self):
 		# merge overlapping verts for the selected meshes!
@@ -840,13 +1030,15 @@ class FloatEntry(tk.Entry):
 				f = int(P) # then we gotta try making it an integer!
 			# update our float value!
 			self.float_value = f
-			self.update_float_functions()
+			if V != "focusin":
+				self.update_float_functions()
 			return True
 		except:
 
 			if len(P) == 0 or (P == "-" and self.allow_negative) or (P == "." and not self.only_ints):
 				self.float_value = 0
-				self.update_float_functions()
+				if V != "focusin":
+					self.update_float_functions()
 				if V == "focusout":
 					# then we've left the window so set the text to be 0!
 					# self.delete(0, tk.END)
@@ -991,6 +1183,23 @@ class UVToolsPage(Page):
 		label = tk.Label(self, text="Pack:") # to space things out!
 		label.pack(side="top", fill="both", expand=False)
 
+		horizontal_frame = tk.Frame(self)
+		horizontal_frame.pack()
+		label = tk.Label(horizontal_frame, text="Border (default .5):")
+		label.pack(side="left", fill="both", expand=False)
+		self.border_spacing_entry = FloatEntry(horizontal_frame, .5)
+		self.border_spacing_entry.pack(side="right")
+		self.border_spacing_entry.add_listener(self.set_uv_border)
+
+		horizontal_frame = tk.Frame(self)
+		horizontal_frame.pack()
+		label = tk.Label(horizontal_frame, text="Padding (default .5):")
+		label.pack(side="left", fill="both", expand=False)
+		self.padding_spacing_entry = FloatEntry(horizontal_frame, .5)
+		self.padding_spacing_entry.pack(side="right")
+		self.padding_spacing_entry.add_listener(self.set_uv_padding)
+
+
 		self.picoToolData.auto_pack_generated_uvs.set(1)
 
 		naive_pack = tk.Radiobutton(self, 
@@ -1067,11 +1276,18 @@ class UVToolsPage(Page):
 		# self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
 		# self.quitButton.pack()
 
+	def set_uv_padding(self, f):
+		self.picoToolData.uv_padding = f
+
+	def set_uv_border(self, f):
+		self.picoToolData.uv_border = f
+
 	def update_pack_buttons(self):
 		if self.picoToolData.auto_pack_generated_uvs.get() == 1:
 			self.pack_naively()
 		elif self.picoToolData.auto_pack_generated_uvs.get() == 2:
 			self.pack_largest_first()
+		self.picoToolData.notify_update_render_listeners()
 
 	def show_unwrapping_page(self):
 		self.show_page(self.mainView.uv_unwrapping_page)
@@ -1080,23 +1296,32 @@ class UVToolsPage(Page):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
 				f.flip_UVs()
+		self.picoToolData.notify_update_render_listeners()
 
 	def unwrap_model(self):
 		# unwrap the model's faces!
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
 				f.test_create_normals(scale = 1)
+		self.picoToolData.notify_update_render_listeners()
 
 	def round_uvs_to_quarter_unit(self):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
 				f.round_normals(nearest = .25)
+		self.picoToolData.notify_update_render_listeners()
 
 	def pack_naively(self):
-		self.picoToolData.picoSave.pack_normals_naively(padding = .5, border = .5)
+		padding = self.picoToolData.uv_padding
+		border = self.picoToolData.uv_border
+		self.picoToolData.picoSave.pack_normals_naively(padding = padding, border = border)
+		self.picoToolData.notify_update_render_listeners()
 
 	def pack_largest_first(self):
-		self.picoToolData.picoSave.pack_normals_largest_first(padding = .5, border = .5)
+		padding = self.picoToolData.uv_padding
+		border = self.picoToolData.uv_border
+		self.picoToolData.picoSave.pack_normals_largest_first(padding = padding, border = border)
+		self.picoToolData.notify_update_render_listeners()
 
 	def validate_export_scalar(self, d, i, P, s, S, v, V, W):
 		# print("IMPLEMENT THIS!!!! ") # TODO FIX THIS
@@ -1233,6 +1458,7 @@ class UVExportPage(Page):
 			self.pack_naively()
 		elif self.picoToolData.auto_pack_generated_uvs.get() == 2:
 			self.pack_largest_first()
+		self.picoToolData.notify_update_render_listeners()
 
 	def show_unwrapping_page(self):
 		self.show_page(self.mainView.uv_unwrapping_page)
@@ -1241,23 +1467,32 @@ class UVExportPage(Page):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
 				f.flip_UVs()
+		self.picoToolData.notify_update_render_listeners()
 
 	def unwrap_model(self):
 		# unwrap the model's faces!
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
 				f.test_create_normals(scale = 1)
+		self.picoToolData.notify_update_render_listeners()
 
 	def round_uvs_to_quarter_unit(self):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
 				f.round_normals(nearest = .25)
+		self.picoToolData.notify_update_render_listeners()
 
 	def pack_naively(self):
-		self.picoToolData.picoSave.pack_normals_naively(padding = .5, border = .5)
+		padding = self.picoToolData.uv_padding
+		border = self.picoToolData.uv_border
+		self.picoToolData.picoSave.pack_normals_naively(padding = padding, border = border)
+		self.picoToolData.notify_update_render_listeners()
 
 	def pack_largest_first(self):
-		self.picoToolData.picoSave.pack_normals_largest_first(padding = .5, border = .5)
+		padding = self.picoToolData.uv_padding
+		border = self.picoToolData.uv_border
+		self.picoToolData.picoSave.pack_normals_largest_first(padding = padding, border = border)
+		self.picoToolData.notify_update_render_listeners()
 
 	def validate_export_scalar(self, d, i, P, s, S, v, V, W):
 		# print("IMPLEMENT THIS!!!! ") # TODO FIX THIS
@@ -1475,6 +1710,7 @@ class UVUnwrappingPage(Page):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
 				f.flip_UVs()
+		self.picoToolData.notify_update_render_listeners()
 
 	def unwrap_model(self):
 		# unwrap the model's faces!
@@ -1508,17 +1744,25 @@ class UVUnwrappingPage(Page):
 				self.pack_naively()
 			elif self.picoToolData.auto_pack_generated_uvs.get() == 2:
 				self.pack_largest_first()
+		self.picoToolData.notify_update_render_listeners()
 
 	def round_uvs_to_quarter_unit(self):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
 				f.round_normals(nearest = .25)
+		self.picoToolData.notify_update_render_listeners()
 
 	def pack_naively(self):
-		self.picoToolData.picoSave.pack_normals_naively(padding = .5, border = .5)
+		padding = self.picoToolData.uv_padding
+		border = self.picoToolData.uv_border
+		self.picoToolData.picoSave.pack_normals_naively(padding = padding, border = border)
+		self.picoToolData.notify_update_render_listeners()
 
 	def pack_largest_first(self):
-		self.picoToolData.picoSave.pack_normals_largest_first(padding = .5, border = .5)
+		padding = self.picoToolData.uv_padding
+		border = self.picoToolData.uv_border
+		self.picoToolData.picoSave.pack_normals_largest_first(padding = padding, border = border)
+		self.picoToolData.notify_update_render_listeners()
 
 	def validate_export_scalar(self, d, i, P, s, S, v, V, W):
 		# print("IMPLEMENT THIS!!!! ") # TODO FIX THIS
@@ -1764,6 +2008,8 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 
 		self.winfo_toplevel().title("Jordan's picoCAD Toolkit")
 
+		self.make_object_view_frame()
+
 		self.main_page = IntroPage(master, self, picoToolData)
 		self.tool_page = MainToolPage(master, self, picoToolData)
 		self.debug_page = DebugToolsPage(master, self, picoToolData)
@@ -1779,12 +2025,133 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 
 		buttonframe = tk.Frame(self)
 		#buttonframe.pack(side="top", fill="x", expand=False)
-		container.pack(side="top", fill="both", expand=True)
+		container.pack(side="left", fill="both", expand=True)
+		# container.grid(column=0)
 
 		# self.main_page.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
 		for p in self.pages:
 			p.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
 		self.main_page.show()
+
+	def make_object_view_frame(self):
+		# make the object view frame I guess? It's currently just going to copy what picoCAD sees lol
+		container = tk.Frame(self)
+		container.pack(side="right", fill="both", expand=False)
+
+		view_grid = tk.Frame(container)
+		view_grid.pack(side="top", fill="both", expand=True)
+
+		self.picoToolData.projection_coords = SimpleVector(0, 0, 0)
+		self.picoToolData.zoom = 4
+
+		self.render_views = []
+		self.canvas_centering_mat = make_offset_matrix((100, 100, 0))
+		self.projection_coords_matrix = make_offset_matrix(self.picoToolData.projection_coords)
+		self.zoom_matrix = make_scale_matrix(self.picoToolData.zoom)
+
+		movement_speed = 10
+
+		self.top_down_canvas = MeshDisplayCanvas(view_grid, self.picoToolData, width=200,height=200, bg="white")
+		self.top_down_canvas.grid(column=0, row=0)
+		top_down_mat = [[0, 0, 1, 0],[1, 0, 0, 0],[0, 0, 1, 0],[0, 0, 0, 1]]
+		self.top_down_canvas.set_projection_list([self.canvas_centering_mat, top_down_mat, self.projection_coords_matrix, self.zoom_matrix])
+		self.top_down_canvas.initialize_arrow_key_controls(SimpleVector(0, 0, -1), SimpleVector(1, 0, 0), movement_speed, self.update_camera_pos_matrix, self.update_zoom)
+		self.top_down_canvas.set_axes_labels("+Z", "-Z", "-X", "+X")
+		self.render_views.append(self.top_down_canvas)
+
+		self.uv_view_canvas = MeshDisplayCanvas(view_grid, self.picoToolData, width=200,height=200, bg="white")
+		self.uv_view_canvas.grid(column=1, row=0)
+		self.uv_view_canvas.render_mesh = False # so it renders the UVs!
+		uv_view_mat = [[1, 0, 0, 0],[0, 1, 0, 0],[0, 0, 1, 0],[0, 0, 0, 1]]
+		self.uv_view_canvas.set_projection_list([self.canvas_centering_mat, uv_view_mat, self.projection_coords_matrix, self.zoom_matrix, make_offset_matrix((-128/16, -128/16, 0))])
+		self.uv_view_canvas.initialize_arrow_key_controls(SimpleVector(-1, 0, 0), SimpleVector(0, 1, 0), movement_speed, self.update_camera_pos_matrix, self.update_zoom)
+		# self.uv_view_canvas.set_axes_labels("+X", "-X", "+Y", "-Y")
+		self.uv_view_canvas.set_axes_labels("", "", "UVs", "")
+		self.render_views.append(self.uv_view_canvas)
+
+		self.z_axis_view = MeshDisplayCanvas(view_grid, self.picoToolData, width=200,height=200, bg="white")
+		self.z_axis_view.grid(column=0, row=1)
+		z_axis_view_mat = [[0, 0, 1, 0],[0, 1, 0, 0],[0, 0, 1, 0],[0, 0, 0, 1]]
+		self.z_axis_view.set_projection_list([self.canvas_centering_mat, z_axis_view_mat, self.projection_coords_matrix, self.zoom_matrix])
+		self.z_axis_view.initialize_arrow_key_controls(SimpleVector(0, 0, -1), SimpleVector(0, 1, 0), movement_speed, self.update_camera_pos_matrix, self.update_zoom)
+		self.z_axis_view.set_axes_labels("+Z", "-Z", "-Y", "+Y")
+		self.render_views.append(self.z_axis_view)
+
+		self.x_axis_view = MeshDisplayCanvas(view_grid, self.picoToolData, width=200,height=200, bg="white")
+		self.x_axis_view.grid(column=1, row=1)
+		x_axis_view_mat = [[-1, 0, 0, 0],[0, 1, 0, 0],[0, 0, 1, 0],[0, 0, 0, 1]]
+		self.x_axis_view.set_projection_list([self.canvas_centering_mat, x_axis_view_mat, self.projection_coords_matrix, self.zoom_matrix])
+		self.x_axis_view.initialize_arrow_key_controls(SimpleVector(1, 0, 0), SimpleVector(0, 1, 0), movement_speed, self.update_camera_pos_matrix, self.update_zoom)
+		self.x_axis_view.set_axes_labels("-X", "+X", "-Y", "+Y")
+		self.render_views.append(self.x_axis_view)
+
+		# now loop over the render views and set their callbacks:
+		for view in self.render_views:
+			# self.picoToolData.add_picoSave_listener(view.update_picoSave_to_render)
+			# self.picoToolData.add_selected_mesh_listener(view.update_selected_objects)
+			self.picoToolData.add_update_render_listener(view.update_render_listener)
+
+		# now make the buttons that will move around the projections
+		view_button_list = tk.Frame(container)
+		view_button_list.pack(side="bottom", fill="both", expand=True)
+
+		self.zoom_in_button = tk.Button(view_button_list, text = "+", command = lambda:self.mult_zoom(2))
+		self.zoom_in_button.pack(side="right")
+		self.zoom_out_button = tk.Button(view_button_list, text = "-", command = lambda:self.mult_zoom(.5))
+		self.zoom_out_button.pack(side="right")
+
+		movement_buttons = tk.Button(view_button_list, text = ">", command = lambda:self.adjust_position(movement_speed, 0, 0))
+		movement_buttons.pack(side="right")
+		movement_buttons = tk.Button(view_button_list, text = "<", command = lambda:self.adjust_position(-movement_speed, 0, 0))
+		movement_buttons.pack(side="right")
+		movement_buttons = tk.Button(view_button_list, text = "^", command = lambda:self.adjust_position(0, 0, movement_speed))
+		movement_buttons.pack(side="right")
+		movement_buttons = tk.Button(view_button_list, text = "v", command = lambda:self.adjust_position(0, 0, -movement_speed))
+		movement_buttons.pack(side="right")
+		movement_buttons = tk.Button(view_button_list, text = "up", command = lambda:self.adjust_position(0, -movement_speed, 0))
+		movement_buttons.pack(side="right")
+		movement_buttons = tk.Button(view_button_list, text = "down", command = lambda:self.adjust_position(0, movement_speed, 0))
+		movement_buttons.pack(side="right")
+		movement_buttons = tk.Button(view_button_list, text = "reset", command = lambda:self.reset_position())
+		movement_buttons.pack(side="right")
+
+		render_origins_checkbox = tk.Checkbutton(view_button_list, text = "Render Origins", variable = self.picoToolData.render_origins, onvalue = 1, offvalue = 0, command = self.picoToolData.notify_update_render_listeners)
+		render_origins_checkbox.pack(side="right")
+
+	def reset_position(self):
+		self.picoToolData.projection_coords = SimpleVector(0, 0, 0)
+		self.update_camera_pos_matrix()
+		self.picoToolData.zoom = 4
+		self.update_zoom()
+
+	def adjust_position(self, delta_pos):
+		self.picoToolData.projection_coords += delta_pos
+		self.update_camera_pos_matrix()
+
+	def adjust_position(self, x, y, z):
+		self.picoToolData.projection_coords += SimpleVector(x, y, z)
+		self.update_camera_pos_matrix()
+
+	def adjust_zoom(self, delta):
+		self.picoToolData.zoom += delta
+		self.update_zoom()
+
+	def mult_zoom(self, scalar):
+		self.picoToolData.zoom *= scalar
+		self.update_zoom()
+
+	def update_zoom(self):
+		self.zoom_matrix = make_scale_matrix(self.picoToolData.zoom)
+		self.update_matrix(3, self.zoom_matrix)
+
+	def update_camera_pos_matrix(self):
+		self.projection_coords_matrix = make_offset_matrix(self.picoToolData.projection_coords)
+		self.update_matrix(2, self.projection_coords_matrix)
+
+	def update_matrix(self, index, matrix):
+		for view in self.render_views:
+			view.set_projection(index, matrix)
+
 
 def quit_check_for_save(root, picoToolData):
 	if picoToolData.picoSave != None and picoToolData.picoSave.is_dirty():
@@ -1812,6 +2179,12 @@ def get_save_location():
 			# do these paths work? Who knows! Someone please tell me :P
 			return "~/.lexaloffle/pico-8/appdata/picocad/"
 		return "/"
+
+def from_rgb(rgb):
+    """translates an rgb tuple of int to a tkinter friendly color code
+    https://stackoverflow.com/questions/51591456/can-i-use-rgb-in-tkinter/51592104
+    """
+    return "#%02x%02x%02x" % rgb   
 
 def quit(root):
 	# this gets called upon application closing
@@ -1844,9 +2217,16 @@ if __name__ == "__main__":
 	root = tk.Tk()
 	picoToolData = PicoToolData()
 	main = MainView(root, picoToolData)
+
+	# for debug testing! This makes it much easier for me!
+	test_filepath = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/output_file_test.txt"
+	test_filepath = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/full_train.txt"
+	if os.path.exists(test_filepath):
+		picoToolData.set_filepath(test_filepath)
+
 	main.pack(side="top", fill="both", expand=True)
 	root.protocol("WM_DELETE_WINDOW", lambda : quit_check_for_save(root, picoToolData))
-	root.wm_geometry("400x400")
+	root.wm_geometry("800x450")
 	if(len(sys.argv) == 2):
 		# then make it full screen I guess
 		# root.attributes('-zoomed', True)  # This just maximizes it so we can see the window. It's nothing to do with fullscreen.

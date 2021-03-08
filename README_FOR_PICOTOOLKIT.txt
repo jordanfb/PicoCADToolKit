@@ -13,6 +13,10 @@ the data that the tool currently has open!
 
 How to use the tool (the basics in far too much detail):
 
+Jordan's PicoCAD Toolkit is divided up into two halves. The half on the left is
+where all the settings are. The half on the right is where you can see various
+views of your loaded model! Here are some basic instructions to get started
+using the toolkit.
 
 1) First, make a model in picoCAD and save it!
 2) Launch PicoToolkit.exe from this folder
@@ -29,6 +33,35 @@ If you're on Windows you may have an additional option appear that is
 "Open in picoCAD". If you have the picoCAD application open and click that button
 it will try to open the saved file in picoCAD. If you want to view your changes in
 picoCAD you'll have to save your file _then_ click open in picoCAD.
+
+How to use the Render Views:
+The render views take up the right half of the screen. They're useful for
+determining which object(s) you're currently editing and for previewing your
+changes before you save and overwrite your model.
+
+The render views are divided up into four quadrants and a list of buttons.
+The quadrants are oriented the same way as in picoCAD.
+Top Left: View facing downwards (facing +Y)
+Bottom Left: View facing left (facing -X)
+Bottom Right: View facing backwards (facing -Z)
+
+The top right view shows the current UV unwrapping of the selected meshes.
+
+To navigate in the views there are several options.
+The first, albeit the most cumbersome, is the list of buttons below all the
+render views.
+1) The reset button resets the position and zoom level of the renders.
+2) The down and up buttons change the Y coordinate, the ^ and v buttons change
+the Z coordinate, and the < and > buttons change the X coordinate
+3) the - and + buttons change the zoom level of all the views!
+On the left of all the buttons is a checkbox that determines whether or not the
+render views should show the origins of each of the selected meshes.
+
+The second method is using the arrow keys or wasd while hovering your mouse over
+a render view just like in picoCAD. The render will move relative to that view,
+and all the other views will follow suit.
+
+You can also use the - and = keys and the scroll wheel to zoom in and out.
 
 
 How to use the UV Menu:
@@ -72,11 +105,15 @@ size), or with the tallest shapes first (which will pack the largest objects at 
 top of the image, then the next tallest etc.). The tallest first method can be a 
 little more space efficient if you're running low on space.
 
-1) There are three radial buttons for how the tool should automatically pack your
+1) The border field sets how much space should be left on the edge of the UV map.
+The default is .5 (which is 2 pixels worth) but in reality it could be 0
+2) The padding field sets how much space should be left between objects in the UV
+map. The default is .5 (2 pixels) but again it can probably be 0!
+3) There are three radial buttons for how the tool should automatically pack your
 UVs when it generates them in the UV Unwrapping tab. Explanations for the methods
 are listed above!
-2) There are then buttons to manually pack the UVs with one of the two methods
-3) "Show UVs" This button will open up your default image viewer and show a 128x128
+4) There are then buttons to manually pack the UVs with one of the two methods
+5) "Show UVs" This button will open up your default image viewer and show a 128x128
 pixel image that has all the current UV maps on it!
 
 Export:
@@ -119,14 +156,10 @@ This can and will change around your model's vertices and meshes! Please use wit
 MAKE A BACKUP!
 Again, this menu is divided into a header, several tabs, and a back button to return to the main tool menu.
 
-The header has several shared pieces of information:
-1) The "Selected Mesh" i.e. which mesh to apply the operations to!
+The header is pretty simple, composed of only a dropdown menu to choose the "Selected Mesh" i.e. which
+mesh to apply the operations to!
 This is a dropdown menu to select either All Meshes or a specific mesh. Some operations will require
 a specific mesh selected, but most will work on all meshes if you let it!
-2) A reference image to the coordinate system in picoCAD. There is no visual way to tell which direction
-is which in picoCAD, nor does there really need to be! However, some of these mesh operations require
-specific directions or values, so this image is here to let you decide how to move things.
-Click on the image to see a full screen version of the image, and click on that to close it.
 
 Next we reach the mesh editing tabs!
 Mesh editing is divided up into three categories: General, Merging, and Origin Editing.
@@ -190,12 +223,12 @@ makes it rotate differently!
 
 1) Adjust the origin manually. Enter in some offset into the three textboxes (one for x, y, and z) and press
 the "Adjust Origin" and it will move the origin(s) of the selected mesh(es) by that much!
-Refer to the axes image at the top right (don't forget to click on it to see a larger view) to see which
-direction is which since it's not quite obvious.
+Refer to the axes labels shown when hovering over the renders to see which direction is which since it's
+not quite obvious.
 2) Move the origin to a point on the world aligned bounding box of your mesh! If you imagine a big box that
 encompasses your mesh and is aligned with the world axes that is the mesh's world aligned bounding box.
 Use the drop downs to select what point on each axis of the bounding box to use for that axis. Again,
-refer to the image of the axes at the top right of this menu to see which way each direction is!
+refer to the axes labels shown when hovering over the renders to see which way each direction is!
 Click the "Move to Point on World Bounding Box" to move it to the selected position.
 3) "Move Origin to Mesh's Average Vertex Position" If you want to move the origin to the center of the mesh
 to uniformly scale it up this is a good option to you! It will average the positions of the vertices and
