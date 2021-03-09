@@ -16,26 +16,6 @@ But that's the current goal! Once I can export a new save I can start manipulati
 I've done that!
 
 Todo:
-Mesh Tools Page:
-- - [x] Implement UI for:
-	- mesh page:
-		- - [x] Merge overlapping vertices
-			- this should also now destroy hidden faces! Hopefully! I should make a checkbox for it though in the UI
-		- - [x] Merge two meshes
-			- second drop down to select mesh to add to the first one, but it won't work with all selected.
-		- - [x] Clean up invalid faces
-			- just a button I think
-		- - [x] Scale mesh
-			- float to scale, then apply to the selected mesh
-			- consider having three different values to scale it all? This way we could also do flipping! (although there may be a bug with that?)
-			- then a toggle to scale from the center of mass vs scale by origin
-- - [x] Change mesh selection to a dropdown menu with [all][1: cube][2: pyramid] etc. as options
-- - [x] Implement UI for exporting alpha maps!
-
-
-- - [x] Tool for flipping mesh normals
-- - [x] Tool for rounding a mesh's vertices to nearest whatever the unit used .25
-- - [x] Tool for mirroring a mesh across an axis
 - - [ ] Tool for duplicating a mesh
 	- Can be done in picoCAD
 - - [ ] Tool for deleting a mesh
@@ -44,8 +24,6 @@ Mesh Tools Page:
 - - [ ] Tool for separating objects if they aren't connected? Hmmmm
 	- this is only really useful if there's a way to split an edge, which I'm not sure how to make so maybe not just yet
 - - [ ] Tool for merging/unmerging the uvs of a mirrored face?
-- - [x] UI entry box for how to scale the uvs when generating them
-- - [x] UI entry box for which object to unwrap (so that you can scale them individually)
 - - [ ] Some way to better determine which mesh is which! A 3d render view? lol
 	- it does seem like I need some way to select which object/face to edit, for this and for the mesh scaling too.
 	- Turns out the best way to do this is with some sort of graphical interface, lots of buttons on the side, vaguely like CAD software?
@@ -54,21 +32,11 @@ Mesh Tools Page:
 	- needs face selection though... hmmmm.
 - - [ ] Consider changing around the output_save_text function of a picoSave to use the parsed header functions not the original text
 - - [ ] Stats page to show how many vertices, faces, objects, etc there are in your model!
+	- apparently the max file size is around 27kb, so an approximate "percentage full" meter would be useful!
+- - [x] Consider making a tool to convert faces from vertex colored to textured via texture map, by either finding a spot on the texture
+	that is the right color and setting the UVs there or by making a spot and setting the UVs there.
+- - [ ] A button to set a particular face setting for all of the faces of an object
 
-Ideas from Munro on the discord:
-a toolbox app like the exporter that did:
-- - [x] scaling,
-- - [x] flipping,
-- - [x] face inverting (althoug currently it's just mesh inverting...,
-- - [x] re-positioned origin points and other mesh related changes would be pretty useful. got some rough code to do some of it for myself but it's not user friendly.
-	- - [x] manual enter three floats to move it by
-	- - [x] Move it to the average position of the vertices
-	- - [x] Calculate the world bounding box of the object and then put a dropdown to move it to one of those points
-	- This is probably going to require its own tab because there's no way this'll fit...
-
-- - [x] Ability to move objects into a different file so that you can focus on editing a single object then combine them later
-	- only really needs a second file selection box, then it copies all the objects in that file into the main loaded file
-	- the user can duplicate files themselves and delete the extra models (and use the backup button to do so as well!)
 
 Current Changelog:
 v0.2: The Mesh Update
@@ -119,6 +87,14 @@ v0.3: The Graphics Update
 - Added controls for those as well (arrow keys, wasd, +-, scroll wheel, and on screen buttons)
 - Added border and padding fields for customizing how spaced out the automatically packed UVs are!
 - Removed the ugly image of the coordinate system and replaced it with text that appears on the render views when you hover over them
+
+v0.3.1(?): The As of yet Unnamed Update
+- Implemented a tool to convert faces from non-textured faces to textured faces by setting the UVs to the first pixel of the correct
+color found
+- Implemented a tool to add any missing colors used by non-textured faces to the end of your image for the above conversion
+- Implemented buttons to set or clear each face property on every face of a mesh
+- Implemented a "change background color" button that will change the background color of the render views between white and all 16 pico8
+colors
 """
 
 
@@ -208,6 +184,12 @@ class PicoFace:
 
 	def mark_clean(self):
 		self.dirty = False
+
+	def set_all_uvs_to_coordinate(self, coord):
+		# this is useful for converting faces from no-texture to texture because it'll set the UV to be a single pixel on the sheet!
+		for i in range(len(self.uvs)):
+			self.uvs[i] = coord.copy()
+		self.dirty = True
 
 	def output_save_text(self):
 		# the text that'll get printed.
@@ -903,6 +885,41 @@ class PicoSave:
 		for o in self.objects:
 			o.mark_clean()
 
+	def find_color_coordinates(self, color_index):
+		# search through the texture stored in this save file and try to find the color!
+		# if it doesn't exist return (-1,-1) False or something like that
+		# this is used to convert faces from untextured to textured by setting their
+		# UVs to a spot of the correct color!
+		color_hex = "0123456789abcdef"[color_index]
+		img_string = self.footer[1:] # remove the % sign
+		lines = img_string.split("\n")
+		lines = [x.strip() for x in lines if len(x.strip()) > 0] # only include the actual texture lines in this search!
+		for y in range(len(lines)):
+			line = lines[y].strip()
+			for x in range(len(line)):
+				c = line[x]
+				if c == color_hex:
+					return (x, y), True
+		return (-1, -1), False
+
+	def set_texture_color(self, coords, color_string):
+		# this is not very performant, but it doesn't really matter...
+		if coords[1] >= 120 or coords[1] < 0 or coords[0] >= 128 or coords[0] < 0:
+			print("Error changing color to " + str(color_string) + " coords out of range: " + str(coords))
+			return
+		img_string = self.footer[1:] # remove the % sign
+		lines = img_string.split("\n")
+		lines = [x.strip() for x in lines if len(x.strip()) > 0]
+		# technically this could error earlier if it's less than 128 but we'll leave it for now
+		
+		# then set the color!
+		line = lines[coords[1]]
+		lines[coords[1]] = line[:coords[0]] + color_string + line[coords[0]+1:] # set the color in the string!
+
+		# then re-join the texture!
+		self.footer = "%\n" + "\n".join(lines)
+		self.dirty = True
+
 	def export_texture(self):
 		img = Image.new("RGBA", (128, 128), (255, 255, 255))
 		img_string = self.footer[1:] # remove the % sign
@@ -968,7 +985,7 @@ class SimpleVector:
 	def __init__(self, x_or_list, y = 0, z = 0):
 		# pass in coords!
 		# print(type(x_or_list), type(x_or_list) == list, x_or_list)
-		if type(x_or_list) == list:
+		if type(x_or_list) == list or type(x_or_list) == tuple:
 			self.x = 0
 			self.y = 0
 			self.z = 0

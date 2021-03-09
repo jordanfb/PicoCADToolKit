@@ -56,6 +56,11 @@ the Z coordinate, and the < and > buttons change the X coordinate
 3) the - and + buttons change the zoom level of all the views!
 On the left of all the buttons is a checkbox that determines whether or not the
 render views should show the origins of each of the selected meshes.
+4) The change background color button will change the background color of the
+render views to be white or one of the 16 pico8 colors so that you can see
+the edges better. It doesn't change the file (you can do that in picoCAD!)
+You can also turn off colored edges if you go the the UV export tab and turn
+off coloring UVs by face color.
 
 The second method is using the arrow keys or wasd while hovering your mouse over
 a render view just like in picoCAD. The render will move relative to that view,
@@ -66,8 +71,8 @@ You can also use the - and = keys and the scroll wheel to zoom in and out.
 
 How to use the UV Menu:
 
-The UV Menu is divided into three tabs for UV Unwrapping, UV Layout editing, and
-Exporting.
+The UV Menu is divided into four tabs for UV Unwrapping, UV Layout editing, face
+property editing and Exporting.
 At the bottom of the menu is a "Back" button which will take you back to the main
 menu.
 
@@ -115,6 +120,32 @@ are listed above!
 4) There are then buttons to manually pack the UVs with one of the two methods
 5) "Show UVs" This button will open up your default image viewer and show a 128x128
 pixel image that has all the current UV maps on it!
+
+Properties:
+This page is full of actions relating to the face properties of the selected mesh(es)!
+
+1) Up top is a dropdown menu to select which mesh(es) to apply the following operations
+on.
+2) Next is a list of buttons that will set or clear each property on every face
+of the currently selected mesh at once.
+3) Next is a section that is useful for prepping your mesh to export to an obj,
+it converts all faces that have the "No Texture" property enabled (i.e. they display
+as whatever color it is set to even during the textured display mode) into textured
+faces by finding the first (upper-left most) pixel in the texture that is the correct
+color and setting the UV coordinates of the face to that pixel and clearing the
+"no texture" option.
+4) If not every color exists in the texture (or you want to check if all the colors
+exist) then you can press "Display Missing Colors" and it will show which color indices
+are missing (Note they're 0 indexed, so in the color picker you start counting from 0
+up to 15)
+5) If you don't want to manually add the colors to your texture the next button of this
+menu will add them to the bottom right of the image and then convert all the non-textured
+faces of the selected meshes into textured faces. It will add a single pixel of each
+color to your image which is too small to manually select but will take up less space.
+Note that if your existing UV unwrapping includes the bottom right corner then the added
+pixels will be visible elsewhere on your model! If that's the case then add the colors
+manually elsewhere by editing the texture, then assign the newly edited texture, save it,
+return to this tool and select "Convert Colored Faces Into Textured Faces" to convert them.
 
 Export:
 This menu controls how you export and show the UVs!

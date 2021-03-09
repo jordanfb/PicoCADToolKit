@@ -239,6 +239,9 @@ class MeshDisplayCanvas(tk.Canvas):
 		# ignore the parameter just use this to update which objects are being rendered!
 		self.update_render()
 
+	def set_background_color(self, color):
+		self.configure(bg=color)
+
 	def update_render_listener(self, picoToolData):
 		self.update_render() # possibly check for things like zoom updates and whatever but for now we're handling that elsewhere
 
@@ -974,13 +977,15 @@ class UVMasterPage(Page):
 		#Add 2nd tab 
 		uv_tabs.add(tab2, text="UV Layout")
 
-		tab3 = UVExportPage(uv_tabs, self.mainView, self.picoToolData)
-		uv_tabs.add(tab3, text="Export")
+		tab3 = FaceConversionFrame(uv_tabs, self.mainView, self.picoToolData)
+		uv_tabs.add(tab3, text="Properties")
+
+		tab4 = UVExportPage(uv_tabs, self.mainView, self.picoToolData)
+		uv_tabs.add(tab4, text="Export")
 
 		uv_tabs.select(tab1)
 
 		uv_tabs.enable_traversal()
-
 
 		# self.test_float_entry = FloatEntry(self)
 		# self.test_float_entry.add_listener(lambda f: print(f))
@@ -1389,6 +1394,189 @@ class UVToolsPage(Page):
 		# can also pass in scalars but who knows about that
 		uv_img = self.picoToolData.picoSave.make_UV_image(self.uv_map_scale, color_by_face = self.picoToolData.color_uv_setting.get() == 1)
 		uv_img.show()
+
+class FaceConversionFrame(tk.Frame):
+	def __init__(self, master, mainView, picoToolData):
+		self.master = master
+		self.mainView = mainView
+		self.picoToolData = picoToolData
+		tk.Frame.__init__(self, master)
+		# this is a pretty simple one, it just has buttons for setting the face values of every face on the objects
+		# lots of toggles and buttons!
+
+		# the options are:
+		# self.doublesided = doublesided
+		# self.notshaded = notshaded
+		# self.priority = priority
+		# self.nottextured = nottextured
+
+		# first things first select the mesh!
+		label = tk.Label(self, text="Select Mesh To Edit:")
+		label.pack(side="top", fill="both", expand=False)
+		# then create the dropdown menu! It'll be synced between this and the UV editing page!
+		self.mesh_to_unwrap_entry = IntegerOutputOptionMenu(self, [("All Meshes", -1), ("1: This is a test", 1), ("2: if you see this please tell Jordan", 2)])
+		self.mesh_to_unwrap_entry.pack()
+		if self.picoToolData.picoSave != None:
+			self.mesh_to_unwrap_entry.build_choices_from_picoSave(self.picoToolData.picoSave)
+		self.mesh_to_unwrap_entry.add_listener(self.picoToolData.set_selected_mesh)
+		self.picoToolData.add_picoSave_listener(self.mesh_to_unwrap_entry.build_choices_from_picoSave)
+		self.picoToolData.add_selected_mesh_listener(self.mesh_to_unwrap_entry.set_selection_index)
+		# so that when the mesh is updated this will be updated too!
+
+		label = tk.Label(self, text="Set Properties of All Sides:")
+		label.pack(side="top", fill="both", expand=False)
+
+		frame = tk.Frame(self)
+		frame.pack()
+		button = tk.Button(frame, text = "Set \"Double-Sided\"", command = lambda: self.set_all_faces_doublesided(True))
+		button.pack(side="left")
+		button = tk.Button(frame, text = "Clear \"Double-Sided\"", command = lambda: self.set_all_faces_doublesided(False))
+		button.pack(side="left")
+
+		frame = tk.Frame(self)
+		frame.pack()
+		button = tk.Button(frame, text = "Set \"No Shading\"", command = lambda: self.set_all_faces_notshaded(True))
+		button.pack(side="left")
+		button = tk.Button(frame, text = "Clear \"No Shading\"", command = lambda: self.set_all_faces_notshaded(False))
+		button.pack(side="left")
+
+		frame = tk.Frame(self)
+		frame.pack()
+		button = tk.Button(frame, text = "Set \"No Texture\"", command = lambda: self.set_all_faces_nottextured(True))
+		button.pack(side="left")
+		button = tk.Button(frame, text = "Clear \"No Texture\"", command = lambda: self.set_all_faces_nottextured(False))
+		button.pack(side="left")
+
+		frame = tk.Frame(self)
+		frame.pack()
+		button = tk.Button(frame, text = "Set \"Render First\"", command = lambda: self.set_all_faces_priority(True))
+		button.pack(side="left")
+		button = tk.Button(frame, text = "Clear \"Render First\"", command = lambda: self.set_all_faces_priority(False))
+		button.pack(side="left")
+
+		# now comes the hard stuff! A few buttons for converting faces from no-texture to texture and one for editing the color!
+		# oh dear!
+		label = tk.Label(self, text="Tools to Convert Colored Faces Into Textured Faces:")
+		label.pack(side="top", fill="both", expand=False)
+		button = tk.Button(self, text = "Convert Colored Faces Into Textured Faces", command = self.find_texture_for_no_texture_faces)
+		button.pack()
+		button = tk.Button(self, text = "Display Missing Colors", command = self.display_missing_colors)
+		button.pack()
+
+		self.missing_colors_text_var = tk.StringVar()
+		label = tk.Label(self, textvariable=self.missing_colors_text_var)
+		label.pack(side="top", fill="both", expand=False)
+
+		button = tk.Button(self, text = "Add Missing Colors To End of Texture and Convert", command = self.add_missing_colors_with_confirmation)
+		button.pack()
+
+	def find_texture_for_no_texture_faces(self):
+		# if a face is set to no-texture, try to set the UV coordinates to their color somewhere in the texture!
+		objs = self.picoToolData.get_selected_mesh_objects()
+		num_faces_converted = 0
+		missing = []
+		for o in objs:
+			for f in o.faces:
+				if f.nottextured:
+					# then try to find the color in the color! This may be chug a little...
+					coords, found = self.picoToolData.picoSave.find_color_coordinates(f.color)
+					if not found:
+						# print("Unable to find color index " + str(f.color) + " in texture. Consider adding it manually or with this tool!")
+						if f.color not in missing:
+							missing.append(f.color)
+					else:
+						# set the uv coords to that spot!
+						uv = SimpleVector(coords)
+						uv /= 8
+						uv = uv.round_to_nearest(.125) # default picoCAD will only let you round to .25, but we want pixel precision!
+						f.set_all_uvs_to_coordinate(uv)
+						f.nottextured = False # convert it to textured! Huzzah!
+						num_faces_converted += 1
+		print("Converted " + str(num_faces_converted) + " face(s) to textured!")
+		if len(missing) > 0:
+			self.set_missing_colors_text(missing)
+		# now update the mesh display!
+		self.picoToolData.notify_update_render_listeners() # the uvs changed in position but not in number so just update the renders.
+
+	def set_missing_colors_text(self, list_missing):
+		if len(list_missing) == 0:
+			print("No Missing Colors")
+			self.missing_colors_text_var.set("No Missing Colors")
+			return
+		s = ", ".join([str(x) for x in list_missing])
+		print("Missing (colors numbered 0-15): " + s)
+		rgb_colors = [str(colors[x]) for x in list_missing]
+		print("Missing RGB values:", ", ".join(rgb_colors))
+		self.missing_colors_text_var.set("Missing (colors numbered 0-15): " + s)
+
+	def display_missing_colors(self):
+		missing = self.get_missing_colors()
+		self.set_missing_colors_text(missing)
+
+	def add_missing_colors_with_confirmation(self):
+		missing = self.get_missing_colors()
+		# set the indices of the texture!
+		# This is the most questionable part of it... I guess I'm just editing the raw string? That's weird and iffy...
+		if len(missing) > 128:
+			print("Error adding colors: WAYYY too many missing colors. This shouldn't even be possible you're super impressive, but tell Jordan")
+			return
+		MsgBox = tk.messagebox.askquestion ('Edit Texture','Are you sure you want to edit the last (bottom right) ' + str(len(missing)) + ' pixels in your texture?',icon = 'warning')
+		if MsgBox != 'yes':
+			return
+		# we now know that it's at most a line of the texture! We can work backwards from the end of the texture replacing the colors until
+		# we've set all our missing colors!
+		for i in range(len(missing)):
+			# the x coord!
+			x = 127-i
+			c = "0123456789abcdef"[missing[i]]
+			self.picoToolData.picoSave.set_texture_color((x, 119), c)
+		print("Added " + str(len(missing)) + " color(s)")
+		self.picoToolData.notify_update_render_listeners()
+		self.find_texture_for_no_texture_faces()
+
+
+	def get_missing_colors(self):
+		# if a face is set to no-texture, try to set the UV coordinates to their color somewhere in the texture!
+		objs = self.picoToolData.get_selected_mesh_objects()
+		missing = []
+		for o in objs:
+			for f in o.faces:
+				if f.nottextured:
+					# then try to find the color in the color! This may be chug a little...
+					coords, found = self.picoToolData.picoSave.find_color_coordinates(f.color)
+					if not found:
+						if f.color not in missing:
+							missing.append(f.color)
+		return missing
+
+	def set_all_faces_priority(self, priority):
+		objs = self.picoToolData.get_selected_mesh_objects()
+		for o in objs:
+			for f in o.faces:
+				f.priority = priority
+				f.dirty = True
+
+	def set_all_faces_doublesided(self, doublesided):
+		objs = self.picoToolData.get_selected_mesh_objects()
+		for o in objs:
+			for f in o.faces:
+				f.doublesided = doublesided
+				f.dirty = True
+
+	def set_all_faces_notshaded(self, notshaded):
+		objs = self.picoToolData.get_selected_mesh_objects()
+		for o in objs:
+			for f in o.faces:
+				f.notshaded = notshaded
+				f.dirty = True
+
+	def set_all_faces_nottextured(self, nottextured):
+		objs = self.picoToolData.get_selected_mesh_objects()
+		for o in objs:
+			for f in o.faces:
+				f.nottextured = nottextured
+				f.dirty = True
+
 
 class UVExportPage(Page):
 	def __init__(self, master, mainView, picoToolData):
@@ -2091,6 +2279,9 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 			# self.picoToolData.add_selected_mesh_listener(view.update_selected_objects)
 			self.picoToolData.add_update_render_listener(view.update_render_listener)
 
+		self.background_color = 16 # start at white!
+		self.update_background_color()
+
 		# now make the buttons that will move around the projections
 		view_button_list = tk.Frame(container)
 		view_button_list.pack(side="bottom", fill="both", expand=True)
@@ -2117,6 +2308,22 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 
 		render_origins_checkbox = tk.Checkbutton(view_button_list, text = "Render Origins", variable = self.picoToolData.render_origins, onvalue = 1, offvalue = 0, command = self.picoToolData.notify_update_render_listeners)
 		render_origins_checkbox.pack(side="right")
+
+		background_color_button = tk.Button(view_button_list, text = "Change Background Color", command = self.increment_background_color)
+		background_color_button.pack(side="right")
+
+	def update_background_color(self):
+		# switch background color between all the picocad colors!
+		color = "#ffffff"
+		if self.background_color < 16:
+			color = from_rgb(colors[self.background_color])			
+		for c in self.render_views:
+			c.set_background_color(color)
+
+	def increment_background_color(self):
+		self.background_color += 1
+		self.background_color %= (len(colors) + 1) # the pico8 colors + pure white!
+		self.update_background_color()
 
 	def reset_position(self):
 		self.picoToolData.projection_coords = SimpleVector(0, 0, 0)
