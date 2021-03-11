@@ -194,9 +194,9 @@ class BigImagePage(Page):
 
 	def load_image(self):
 		if getattr(sys, 'frozen', False):
-			return Image.open(os.path.join(sys._MEIPASS, "files/picoCADAxes.png"))
+			return Image.open(os.path.join(sys._MEIPASS, "files/colorwheel.png"))
 		else:
-			return Image.open("files/picoCADAxes.png")
+			return Image.open("files/colorwheel.png")
 
 	def back_to_previous_page(self, e):
 		self.show_page(self.mainView.mesh_editing_page)
@@ -380,6 +380,303 @@ class MeshDisplayCanvas(tk.Canvas):
 		self.projection_list[index] = matrix
 		self.calculate_full_projection_matrix()
 		self.update_render()
+
+class ImageColorEditingPage(Page):
+	def __init__(self, master, mainView, picoToolData):
+		self.mainView = mainView
+		self.picoToolData = picoToolData
+		Page.__init__(self, master)
+		self.page_name = "Image Color Palette Editing"
+		# this page here is for converting random images of whatever size to nice images in the pico8 color palatte.
+		# it'll currently be limited to the default 16 colors since those are all that picoCAD can use.
+		# if pico8 people actually like it it should be pretty easy to add the other colors.
+
+		self.ui_frame = tk.Frame(self, width=350, height=450)
+		self.ui_frame.pack_propagate(False) # to stop it from expanding with the filename strings!
+		self.ui_frame.pack(side="left", anchor="nw")
+
+		self.selected_color = 0
+		self.filename = ""
+		self.valid_image = False # This really means valid filename, the image will always be valid
+
+		self.main_title_label = tk.Label(self.ui_frame, text="Image To Color Palette Converter")
+		self.main_title_label.pack()
+
+		select_image_frame = tk.Frame(self.ui_frame)
+		select_image_frame.pack()
+		self.select_file_button = tk.Button(select_image_frame, text = "Select .png File", command = self.select_image_file)
+		self.select_file_button.pack(side="left", anchor="w")
+
+		self.selected_filepath_string_var = tk.StringVar() # this will be set with the filepath!
+		self.selected_filepath_label = tk.Label(select_image_frame, textvariable=self.selected_filepath_string_var)
+		self.selected_filepath_label.pack(side="left", anchor="w")
+
+		self.color_button_frame = tk.Frame(self.ui_frame)
+		self.color_button_frame.pack(side="top")
+		self.color_buttons = []
+		self.color_settings = [] # [[total_weight, r_weight, g_weight, b_weight]]
+		for i in range(len(colors)):
+			button1 = tk.Button(self.color_button_frame, text=color_names[i], background = from_rgb(colors[i]), \
+				command = lambda i = i: self.select_color(i))
+			button1.grid(column = i % 4, row = math.floor(i / 4), sticky = "NESW")
+			self.color_buttons.append(button1)
+			self.color_settings.append([1,1,1,1])
+
+		self.selected_color_label_text_var = tk.StringVar()
+		self.selected_color_label = tk.Label(self.ui_frame, textvariable=self.selected_color_label_text_var)
+		self.selected_color_label.pack()
+
+		self.color_box_label = tk.Label(self.ui_frame, text=" "*32)
+		self.color_box_label.pack()
+
+
+		# add the float value entries!
+
+		entry_label = tk.Label(self.ui_frame, text="Color Weights. Higher Values = More Attractive")
+		entry_label.pack()
+
+		entry_frame = tk.Frame(self.ui_frame)
+		entry_frame.pack()
+
+		entry_label = tk.Label(entry_frame, text="Total Color Weight (0 = skip color)")
+		entry_label.pack(side="left")
+		self.total_weight_entry = FloatEntry(entry_frame, 1)
+		self.total_weight_entry.pack(side="left")
+		self.total_weight_entry.allow_negative = False
+		self.total_weight_entry.add_listener(self.update_color_settings)
+
+		entry_frame = tk.Frame(self.ui_frame)
+		entry_frame.pack()
+
+		entry_label = tk.Label(entry_frame, text="Red Weight (0 = ignore axis)")
+		entry_label.pack(side="left")
+		self.r_weight_entry = FloatEntry(entry_frame, 1)
+		self.r_weight_entry.pack(side="left")
+		self.r_weight_entry.allow_negative = False
+		self.r_weight_entry.add_listener(self.update_color_settings)
+
+		entry_frame = tk.Frame(self.ui_frame)
+		entry_frame.pack()
+
+		entry_label = tk.Label(entry_frame, text="Green Weight (0 = ignore axis)")
+		entry_label.pack(side="left")
+		self.g_weight_entry = FloatEntry(entry_frame, 1)
+		self.g_weight_entry.pack(side="left")
+		self.g_weight_entry.allow_negative = False
+		self.g_weight_entry.add_listener(self.update_color_settings)
+
+		entry_frame = tk.Frame(self.ui_frame)
+		entry_frame.pack()
+
+		entry_label = tk.Label(entry_frame, text="Blue Weight (0 = ignore axis)")
+		entry_label.pack(side="left")
+		self.b_weight_entry = FloatEntry(entry_frame, 1)
+		self.b_weight_entry.pack(side="left")
+		self.b_weight_entry.allow_negative = False
+		self.b_weight_entry.add_listener(self.update_color_settings)
+
+
+		self.show_output_file_intvar = tk.IntVar()
+		self.show_output_file_intvar.set(0) # set to zero because the image isn't built yet!
+		show_output_file = tk.Checkbutton(self.ui_frame, text = "Show Output Image", variable = self.show_output_file_intvar, onvalue = 1, offvalue = 0,\
+				command = self.update_showing_output_file)
+		show_output_file.pack()
+
+
+		# now create the image canvas here:
+		self.canvas_size = (450, 450)
+		self.image_canvas_frame = tk.Frame(self, width=450)
+		self.image_canvas_frame.pack(side="left", anchor="ne")
+		self.image_canvas = tk.Canvas(self.image_canvas_frame, width = self.canvas_size[0], height = self.canvas_size[1])
+		self.image_canvas.pack()
+		self.loaded_image_raw = self.load_example_image()
+		
+		# resize it to fit on the canvas
+		self.loaded_image_resized = self.loaded_image_raw.resize(self.canvas_size, Image.NEAREST)
+		self.loaded_image_tk_object = ImageTk.PhotoImage(self.loaded_image_resized)
+		self.base_image_id = self.image_canvas.create_image(0, 0, anchor="nw", image=self.loaded_image_tk_object)
+
+		self.tinted_image_resized = self.loaded_image_raw.resize(self.canvas_size, Image.NEAREST)
+		self.tinted_image_tk_object = ImageTk.PhotoImage(self.tinted_image_resized)
+		self.tinted_image_id = self.image_canvas.create_image(0, 0, anchor="nw", image=self.tinted_image_tk_object)
+
+		self.output_image_dirty = True # set to clean if we update it, set to dirty if we haven't!
+
+		self.update_showing_output_file()
+		# self.update_converted_image() # for now do this? Hmmmmmm....
+		# should probably make a color wheel image as the test image...
+
+		self.update_image = tk.Button(self.ui_frame, text = "Update Output Image", command = self.update_converted_image)
+		self.update_image.pack()
+
+		self.update_image = tk.Button(self.ui_frame, text = "Convert and Save Input Image", command = self.convert_and_save_input)
+		self.update_image.pack()
+
+		self.quitButton = tk.Button(self.ui_frame, text = "Back", command = self.return_to_tools_page)
+		self.quitButton.pack()
+
+		self.select_color(0)
+
+	def update_showing_output_file(self):
+		self.set_output_image_shown(self.show_output_file_intvar.get() == 1)
+
+	def set_output_image_shown(self, shown):
+		if shown:
+			self.image_canvas.itemconfigure(self.base_image_id, state='hidden')
+			self.image_canvas.itemconfigure(self.tinted_image_id, state='normal')
+		else:
+			self.image_canvas.itemconfigure(self.tinted_image_id, state='hidden')
+			self.image_canvas.itemconfigure(self.base_image_id, state='normal')
+
+	def load_example_image(self):
+		if getattr(sys, 'frozen', False):
+			return Image.open(os.path.join(sys._MEIPASS, "files/colorwheel.png"))
+		else:
+			return Image.open("files/colorwheel.png")
+
+	def update_color_settings(self, f):
+		# update the color settings for whatever color we're editing!
+		t = self.total_weight_entry.float_value
+		r = self.r_weight_entry.float_value
+		g = self.g_weight_entry.float_value
+		b = self.b_weight_entry.float_value
+		self.color_settings[self.selected_color] = [t, r, g, b]
+		self.output_image_dirty = True
+
+	def select_color(self, i):
+		self.selected_color = i
+		self.update_selected_color_ui()
+
+	def update_selected_color_ui(self):
+		# based on the selected color go do stuff!
+		self.selected_color_label_text_var.set("Selected Color " + str(self.selected_color + 1) + ", " + str(color_names[self.selected_color]))
+		self.color_box_label["background"] = from_rgb(colors[self.selected_color])
+		# now load the variables that we've set for this color!
+		setting = self.color_settings[self.selected_color]
+		self.total_weight_entry.set_to_value(setting[0])
+		self.r_weight_entry.set_to_value(setting[1])
+		self.g_weight_entry.set_to_value(setting[2])
+		self.b_weight_entry.set_to_value(setting[3])
+
+	def return_to_tools_page(self):
+		self.show_page(self.mainView.tool_page)
+
+	def show(self):
+		# this is special and full screen so there's some finnicky-ness with how I'm displaying and hiding it.
+		self.place(in_=self.master, x=0, y=0, relwidth=1, relheight=1) # the image page is fullscreen I guess so it's special?
+		self.lift()
+		self.active = True
+
+		# we're going to update the image here because if people don't actually want to use this tool then
+		# arguably it'll speed up the load time. Is that actually accurate? no clue. Plus it's not too large an image.
+
+	def leave(self):
+		self.place_forget()
+		self.active = False
+
+	def select_image_file(self):
+		# use the file path thingy to select a file!
+		# for now let's limit them to pngs since that way it _should_ be an image
+		self.filename = askopenfilename(initialdir = get_save_location(), title = "Select picoCAD file to Copy In")
+		if os.path.splitext(self.filename)[1].lower() != ".png" or not os.path.exists(self.filename):
+			self.selected_filepath_string_var.set("Load a valid png image file!")
+			return
+		try:
+			# see if pillow can load it, if yes, then we're solid!
+			img = Image.open(self.filename)
+			self.loaded_image_raw = img
+
+			self.loaded_image_resized = self.loaded_image_raw.resize(self.canvas_size, Image.NEAREST)
+			self.loaded_image_tk_object = ImageTk.PhotoImage(self.loaded_image_resized)
+
+			self.tinted_image_resized = self.loaded_image_raw.resize(self.canvas_size, Image.NEAREST)
+			self.tinted_image_tk_object = ImageTk.PhotoImage(self.tinted_image_resized)
+
+			# now update the images!
+			self.image_canvas.itemconfig(self.base_image_id, image = self.loaded_image_tk_object)
+			self.image_canvas.itemconfig(self.tinted_image_id, image = self.tinted_image_tk_object)
+
+			self.selected_filepath_string_var.set(os.path.basename(self.filename)) # for now just set the file name so it fits better...
+			self.valid_image = True
+			self.update_selected_color_ui()
+		except Exception as e:
+			print("Error: "+ str(e))
+			# print("Error loading pico save!")
+			self.valid_image = False
+			self.selected_filepath_string_var.set("Load a valid png image file!")
+
+	def get_color_distance(self, c, palette_color, color_settings):
+		# color settings are [total_weight, r_weight, g_weight, b_weight]
+		# we've ensured that total_weight will not be zero.
+		# if any of the other ones are zero then we won't check that axis? I guess?
+		# sounds fair enough I guess????
+		dr = c[0] - palette_color[0]
+		dg = c[1] - palette_color[1]
+		db = c[2] - palette_color[2]
+		if color_settings[1] == 0:
+			dr = 0
+		else:
+			dr /= color_settings[1]
+		if color_settings[2] == 0:
+			dg = 0
+		else:
+			dg /= color_settings[2]
+		if color_settings[3] == 0:
+			db = 0
+		else:
+			db /= color_settings[3]
+		return math.sqrt(dr*dr + dg*dg + db*db) / color_settings[0]
+
+	def get_closest_color(self, c):
+		found_output = False
+		min_distance = float("inf")
+		out_color = (255, 255, 255)
+		for i in range(len(self.color_settings)):
+			setting = self.color_settings[i]
+			if setting[0] == 0:
+				continue # skip this color!
+			distance = self.get_color_distance(c, colors[i], setting)
+			if distance < min_distance:
+				out_color = colors[i]
+				min_distance = distance
+		return out_color
+
+	def convert_and_save_input(self):
+		if not self.filename:
+			tk.messagebox.showinfo('Invalid Image','Please load a valid image before trying to output one!', icon = 'warning')
+			return
+		print("Converting Image. This may take a while...")
+		output_img = Image.new("RGB", self.loaded_image_raw.size, (255,255,255))
+		# now go over the input image and convert it over!
+		for y in range(self.loaded_image_raw.height):
+			for x in range(self.loaded_image_raw.width):
+				c = self.loaded_image_raw.getpixel((x,y))
+				p_c = self.get_closest_color(c)
+				output_img.putpixel((x, y), p_c)
+		new_filename = get_associated_filename(self.filename, "_pico8_palette", ".png")
+		output_img.save(new_filename, "png")
+		print("Saved converted output to " + str(new_filename))
+		tk.messagebox.showinfo('Saved Converted Image','Saved converted image to "' + str(new_filename) +  '"')
+
+
+	def update_converted_image(self):
+		print("Converting Image. This may take a while...")
+		# otherwise we have to go over the image and calculat what becomes what!
+		# use our float variables that we've set to figure things out!
+		# is there a more efficient way than updating the image constantly? probably yes.
+		# am I going to implement it? Almost certainly no.
+		for y in range(self.tinted_image_resized.height):
+			for x in range(self.tinted_image_resized.width):
+				c = self.loaded_image_resized.getpixel((x,y))
+				p_c = self.get_closest_color(c)
+				self.tinted_image_resized.putpixel((x, y), p_c)
+		self.tinted_image_tk_object = ImageTk.PhotoImage(self.tinted_image_resized)
+		self.image_canvas.itemconfig(self.tinted_image_id, image = self.tinted_image_tk_object)
+		self.output_image_dirty = False
+		print("Finished converting image")
+		self.show_output_file_intvar.set(1) # show off the image!
+		self.update_showing_output_file()
+
 
 
 class IntroPage(Page):
@@ -650,9 +947,9 @@ class MeshEditingMaster(Page):
 		# self.pico_axes_image = None
 		# self.pico_axes_raw_image = None
 		# if getattr(sys, 'frozen', False):
-		# 	self.axes_raw_image = Image.open(os.path.join(sys._MEIPASS, "files/picoCADAxes.png"))
+		# 	self.axes_raw_image = Image.open(os.path.join(sys._MEIPASS, "files/colorwheel.png"))
 		# else:
-		# 	self.axes_raw_image = Image.open("files/picoCADAxes.png")
+		# 	self.axes_raw_image = Image.open("files/colorwheel.png")
 		# # resize it to fit on the canvas
 		# self.axes_raw_image = self.axes_raw_image.resize((100, 100))
 		# self.pico_axes_image = ImageTk.PhotoImage(self.axes_raw_image)
@@ -1023,7 +1320,7 @@ class FloatEntry(tk.Entry):
 				# self["validate"] = "all" # reset this I guess??? No clue why this happens
 
 	def set_to_value(self, value):
-		self.float_value = 0
+		self.float_value = value
 		self.textvariable.set(str(value))
 		self["validate"] = "all"
 		self.update_float_functions()
@@ -2040,6 +2337,9 @@ class MainToolPage(Page):
 		self.mesh_editing_button = tk.Button(self, text = "Open File Editing Menu", command = self.open_file_editing)
 		self.mesh_editing_button.pack()
 
+		self.mesh_editing_button = tk.Button(self, text = "Open Image Color Palette Editing Menu", command = self.open_image_color_editing)
+		self.mesh_editing_button.pack()
+
 		self.debug_menu_button = tk.Button(self, text = "Open Debug Menu", command = self.open_debug_menu)
 		self.debug_menu_button.pack()
 
@@ -2081,6 +2381,9 @@ class MainToolPage(Page):
 
 	def open_debug_menu(self):
 		self.show_page(self.mainView.debug_page)
+
+	def open_image_color_editing(self):
+		self.show_page(self.mainView.image_color_editing_page)
 
 	def save_overwrite(self):
 		# save the file!!!
@@ -2200,6 +2503,7 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 
 		self.main_page = IntroPage(master, self, picoToolData)
 		self.tool_page = MainToolPage(master, self, picoToolData)
+		self.image_color_editing_page = ImageColorEditingPage(master, self, picoToolData)
 		self.debug_page = DebugToolsPage(master, self, picoToolData)
 		# self.uv_page = UVToolsPage(master, self, picoToolData)
 		# self.uv_unwrapping_page = UVUnwrappingPage(master, self, picoToolData)
@@ -2219,11 +2523,18 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 		# self.main_page.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
 		for p in self.pages:
 			p.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
+		# self.image_color_editing_page.place(in_=self, x=0, y=0, relwidth=1, relheight=1) # the image page is fullscreen I guess so it's special?
+
 		self.main_page.show()
+
+
+		# print("DEBUG CURRENTLY GOING STRAIGHT HERE")
+		# self.image_color_editing_page.show()
 
 	def make_object_view_frame(self):
 		# make the object view frame I guess? It's currently just going to copy what picoCAD sees lol
 		container = tk.Frame(self)
+		self.render_view_frame = container
 		container.pack(side="right", fill="both", expand=False)
 
 		view_grid = tk.Frame(container)

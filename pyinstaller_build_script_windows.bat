@@ -7,6 +7,6 @@
 # pip3 install pyinstaller
 
 
-pyinstaller --clean -y -n "PicoToolkit" --add-data="files\picoCADAxes.png;files" --add-data="README_FOR_PICOTOOLKIT.txt;." toolkitUI.py
+pyinstaller --clean -y -n "PicoToolkit" --add-data="files\colorwheel.png;files" --add-data="README_FOR_PICOTOOLKIT.txt;." toolkitUI.py
 
 pause

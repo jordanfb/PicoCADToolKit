@@ -4,4 +4,6 @@
 
 # pip3 install pyinstaller
 
-pyinstaller --clean -y -n "PicoToolkit.app" --add-data="files/picoCADAxes.png:files" --add-data="README_FOR_PICOTOOLKIT.txt:." toolkitUI.py
+# Currently trying to make it so that the readme is at the same level as the output app! We'll see!
+
+pyinstaller --clean -y -n "PicoToolkit.app" --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.txt:.." toolkitUI.py

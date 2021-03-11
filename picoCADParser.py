@@ -88,13 +88,14 @@ v0.3: The Graphics Update
 - Added border and padding fields for customizing how spaced out the automatically packed UVs are!
 - Removed the ugly image of the coordinate system and replaced it with text that appears on the render views when you hover over them
 
-v0.3.1(?): The As of yet Unnamed Update
+v0.3.1: The Mac Update
 - Implemented a tool to convert faces from non-textured faces to textured faces by setting the UVs to the first pixel of the correct
 color found
 - Implemented a tool to add any missing colors used by non-textured faces to the end of your image for the above conversion
 - Implemented buttons to set or clear each face property on every face of a mesh
 - Implemented a "change background color" button that will change the background color of the render views between white and all 16 pico8
 colors
+- Added a Mac build!
 """
 
 
@@ -123,6 +124,25 @@ colors = [
 (131, 118, 156),
 (255, 119, 168),
 (255, 204, 170)
+]
+
+color_names = [
+"black",
+"dark-blue",
+"dark-purple",
+"dark-green",
+"brown",
+"dark-grey",
+"light-grey",
+"white",
+"red",
+"orange",
+"yellow",
+"green",
+"blue",
+"lavender",
+"pink",
+"light-peach"
 ]
 
 
