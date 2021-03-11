@@ -273,6 +273,64 @@ And finally there's a back button to return to the main tool menu!
 
 
 
+How to use the File Editing Menu:
+The file editing menu is used to merge picoCAD files!
+The controls are relatively simple. MAKE A BACKUP. If you merge too much into your picoCAD save and it
+grows too large it is possible that picoCAD won't be able to load the file!
+1) Select the file that you wish to copy into the current file
+2) Copy the file in! It's that simple, but MAKE A BACKUP before running this!
+3) And finally there's the back button to take you back to where you can save your file.
+This tool can be helpful in several ways:
+
+The most obvious is importing a previous project into your new project.
+
+You can also use this tool to import custom shapes exported from blender into your current project!
+
+If you're trying to reach a hard to reach object one method is saving the picoCAD file as a new save
+file (the "save as" menu option in picoCAD) opening that new file, deleting the objects you don't want to
+edit, editing the object you want to edit, then returning to the original file (THAT YOU SHOULD MAKE A
+BACKUP OF!), deleting the edited object, and the using this tool to merge the object back into place.
+Is it the simplest of workflows? No, but it's an option!
+
+
+
+How to use the Image Color Palette Editing Menu:
+This menu is an experimental attempt at making a tool to help convert images to the pico8 (and thus
+picoCAD) color palette!
+
+1) Start by loading an image by selecting "Select .png File." The image must be a .png file but
+it can be any size, not just images compatable with pico8.
+The image will be loaded into the preview window on the right. While the preview image may be
+squashed depending on the aspect ratio of the input image the final output image will be the same
+aspect ratio and resolution as the input image.
+2) Next is a list of color swatches. Click on the color that you want to edit the influence of.
+3) The selected color name and color swatch are shown under the grid of buttons
+4) Enter the color weights for the selected color! The default influence is 1 for every axis.
+If the total weight is set to zero, that color won't be included in the output image.
+If a channel weight is set to zero, that channel's distance will be ignored when comparing distances.
+Is this helpful? I'm not fully sure, but let me know if it is!
+This tool uses euclidean distance to calculate
+the nearest color, and uses weights to influence them. In general, the larger the weight the more
+influence a swatch has on that axis. If there is too much of one color considering toning down the weight
+of that swatch, or increasing the influence weights of similar colors. It will likely involve guessing and
+checking the output results. If you want the exact equation for calculating distance assuming
+that the channel weight and total weight are non-zero it is as follows:
+
+channel_distance = (pixel_channel - swatch_channel) / channel_weight
+total_weighted_distance = square_root(red_channel_distance^2 +
+			green_channel_distance^2 + blue_channel_distance^2) / total_weight
+
+The tool checks the distance from all pixels to all color swatches and chooses the swatch with the
+smallest weighted distance as the output color!
+5) The "Show Output Image" button will toggle between showing the original image and the output image
+if it has been converted
+6) Converting an image takes a few seconds so you have to manually press "Update Output Image" to convert
+the image for viewing. Once you do it will automatically show you the output image!
+7) Once you're satisfied with how you've adjusted your colors press "Convert and Save Input Image" and
+the tool will convert and save the input image with a new and unique filename in the same folder as the
+original. Once finished it will open a messagebox telling you what the filename is!
+8) And finally there's the back button to take you back to the main menu.
+
 
 
 Thanks for reading! If you have any questions feel free to reach out to me on
