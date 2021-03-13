@@ -1043,9 +1043,9 @@ class MeshEditingMaster(Page):
 		self.scale_factor_frame = tk.Frame(self.general_mesh_editing_frame)
 		self.scale_factor_frame.pack()
 		# now add three float entries!
-		self.x_scale_entry = FloatEntry(self.scale_factor_frame, 1)
-		self.y_scale_entry = FloatEntry(self.scale_factor_frame, 1)
-		self.z_scale_entry = FloatEntry(self.scale_factor_frame, 1)
+		self.x_scale_entry = FloatEntry(self.scale_factor_frame, 1, width=5)
+		self.y_scale_entry = FloatEntry(self.scale_factor_frame, 1, width=5)
+		self.z_scale_entry = FloatEntry(self.scale_factor_frame, 1, width=5)
 		label = tk.Label(self.scale_factor_frame, text="X:")
 		label.pack(side="left")
 		self.x_scale_entry.pack(side="left")
@@ -1062,6 +1062,27 @@ class MeshEditingMaster(Page):
 		self.scale_mesh_button.pack(side="left", padx=(0,10))
 		self.scale_mesh_object_button = tk.Button(self.scale_buttons_frame, text = "Scale Object Position", command = self.scale_object_position)
 		self.scale_mesh_object_button.pack(side="right", padx=(10,0))
+
+		# now implement the mesh rotation!
+		label = tk.Label(self.general_mesh_editing_frame, text="Rotate by (degrees):")
+		label.pack(side="top", fill="both", expand=False)
+		self.rotate_factor_frame = tk.Frame(self.general_mesh_editing_frame)
+		self.rotate_factor_frame.pack()
+		# now add three float entries!
+		self.x_rotate_entry = FloatEntry(self.rotate_factor_frame, 0, width=5)
+		self.y_rotate_entry = FloatEntry(self.rotate_factor_frame, 0, width=5)
+		self.z_rotate_entry = FloatEntry(self.rotate_factor_frame, 0, width=5)
+		label = tk.Label(self.rotate_factor_frame, text="X:")
+		label.pack(side="left")
+		self.x_rotate_entry.pack(side="left")
+		label = tk.Label(self.rotate_factor_frame, text="Y:")
+		label.pack(side="left")
+		self.y_rotate_entry.pack(side="left")
+		label = tk.Label(self.rotate_factor_frame, text="Z:")
+		label.pack(side="left")
+		self.z_rotate_entry.pack(side="left")
+		self.scale_mesh_button = tk.Button(self.general_mesh_editing_frame, text = "Rotate Vertices Around Mesh Origin", command = self.rotate_mesh)
+		self.scale_mesh_button.pack()
 
 		label = tk.Label(self.general_mesh_editing_frame, text="") # just add some space here to separate the scaling from the rest
 		label.pack(side="top", fill="both", expand=False)
@@ -1085,9 +1106,9 @@ class MeshEditingMaster(Page):
 		self.origin_adjustment_frame = tk.Frame(self.origins_editing_tab)
 		self.origin_adjustment_frame.pack()
 		# now add three float entries!
-		self.x_origin_entry = FloatEntry(self.origin_adjustment_frame, 0)
-		self.y_origin_entry = FloatEntry(self.origin_adjustment_frame, 0)
-		self.z_origin_entry = FloatEntry(self.origin_adjustment_frame, 0)
+		self.x_origin_entry = FloatEntry(self.origin_adjustment_frame, 0, width=5)
+		self.y_origin_entry = FloatEntry(self.origin_adjustment_frame, 0, width=5)
+		self.z_origin_entry = FloatEntry(self.origin_adjustment_frame, 0, width=5)
 		label = tk.Label(self.origin_adjustment_frame, text="X:")
 		label.pack(side="left")
 		self.x_origin_entry.pack(side="left")
@@ -1190,6 +1211,29 @@ class MeshEditingMaster(Page):
 		for o in objs:
 			rounded = o.pos.round_to_nearest(.25)
 			o.move_origin_to_world_position(rounded)
+		self.picoToolData.notify_update_render_listeners()
+
+	def rotate_mesh(self):
+		# convert them to degrees, make the matrices, then apply the rotations!
+		x_radians = math.radians(self.x_rotate_entry.float_value)
+		y_radians = math.radians(self.y_rotate_entry.float_value)
+		z_radians = math.radians(self.z_rotate_entry.float_value)
+		print("Rotating mesh(es) by " + str(self.x_rotate_entry.float_value) + " degrees X, then " \
+					+ str(self.y_rotate_entry.float_value) + " degrees Y, then " \
+					+ str(self.z_rotate_entry.float_value) + " degrees Z")
+		objs = self.picoToolData.get_selected_mesh_objects()
+		x_rot_mat = make_x_rotation_matrix(x_radians)
+		y_rot_mat = make_y_rotation_matrix(y_radians)
+		z_rot_mat = make_z_rotation_matrix(z_radians)
+		for o in objs:
+			# rotate all the vertices!
+			o.dirty = True
+			for i in range(len(o.vertices)):
+				t = o.vertices[i]
+				t = t.mat_mult(x_rot_mat)
+				t = t.mat_mult(y_rot_mat)
+				t = t.mat_mult(z_rot_mat)
+				o.vertices[i] = t
 		self.picoToolData.notify_update_render_listeners()
 
 	def merge_mesh(self):

@@ -1220,6 +1220,24 @@ def make_offset_matrix(delt_pos):
 	output = [[1,0,0,delt_pos[0]], [0,1,0,delt_pos[1]], [0,0,1,delt_pos[2]], [0,0,0,1]]
 	return output
 
+def make_x_rotation_matrix(x_radians):
+	cos = math.cos(x_radians)
+	sin = math.sin(x_radians)
+	output = [[1, 0, 0, 0], [0, cos, -sin, 0], [0, sin, cos, 0], [0, 0, 0, 1]]
+	return output
+
+def make_y_rotation_matrix(y_radians):
+	cos = math.cos(y_radians)
+	sin = math.sin(y_radians)
+	output = [[cos, 0, sin, 0], [0, 1, 0, 0], [-sin, 0, cos, 0], [0, 0, 0, 1]]
+	return output
+
+def make_z_rotation_matrix(z_radians):
+	cos = math.cos(z_radians)
+	sin = math.sin(z_radians)
+	output = [[cos, -sin, 0, 0], [sin, cos, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+	return output
+
 def load_picoCAD_save(filepath):
 	if os.path.exists(filepath):
 		# print("it's real!")
