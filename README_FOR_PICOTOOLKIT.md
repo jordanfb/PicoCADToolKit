@@ -11,7 +11,8 @@ you losing all your work! There's even a handy button that will save a copy of
 the data that the tool currently has open!
 
 
-How to use the tool (the basics in far too much detail):
+## How to use the tool:
+_(the basics in far too much detail)_
 
 Jordan's PicoCAD Toolkit is divided up into two halves. The half on the left is
 where all the settings are. The half on the right is where you can see various
@@ -34,7 +35,7 @@ If you're on Windows you may have an additional option appear that is
 it will try to open the saved file in picoCAD. If you want to view your changes in
 picoCAD you'll have to save your file _then_ click open in picoCAD.
 
-How to use the Render Views:
+### How to use the Render Views:
 The render views take up the right half of the screen. They're useful for
 determining which object(s) you're currently editing and for previewing your
 changes before you save and overwrite your model.
@@ -69,14 +70,14 @@ and all the other views will follow suit.
 You can also use the - and = keys and the scroll wheel to zoom in and out.
 
 
-How to use the UV Menu:
+### How to use the UV Menu:
 
 The UV Menu is divided into four tabs for UV Unwrapping, UV Layout editing, face
 property editing and Exporting.
 At the bottom of the menu is a "Back" button which will take you back to the main
 menu.
 
-UV Unwrapping:
+#### UV Unwrapping:
 This is the process of "flattening" the 3D faces on your meshes into a 2D version
 for texturing. The picoToolkit has a simple algorithm that does its best to unwrap
 each face relative to its size and dimensions in worldspace, and has a few settings
@@ -103,7 +104,7 @@ beforehand.
 pixel image that has all the current UV maps on it!
 
 
-UV Layout:
+#### UV Layout:
 The tool currently has two ways to pack your UVs into your UV texture. It can either
 do it naively (which adds each face in order of every object in order, no matter the
 size), or with the tallest shapes first (which will pack the largest objects at the
@@ -121,7 +122,7 @@ are listed above!
 5) "Show UVs" This button will open up your default image viewer and show a 128x128
 pixel image that has all the current UV maps on it!
 
-Properties:
+#### Properties:
 This page is full of actions relating to the face properties of the selected mesh(es)!
 
 1) Up top is a dropdown menu to select which mesh(es) to apply the following operations
@@ -147,7 +148,7 @@ pixels will be visible elsewhere on your model! If that's the case then add the 
 manually elsewhere by editing the texture, then assign the newly edited texture, save it,
 return to this tool and select "Convert Colored Faces Into Textured Faces" to convert them.
 
-Export:
+#### Export:
 This menu controls how you export and show the UVs!
 
 1) Checkbox for "Color UVs with Face Color" If checked, the UV images that you
@@ -181,7 +182,7 @@ settings for most transparency masks in most tools so you should be able to use 
 
 
 
-How to use the Mesh Editing Menu:
+### How to use the Mesh Editing Menu:
 
 This can and will change around your model's vertices and meshes! Please use with caution and
 MAKE A BACKUP!
@@ -195,7 +196,7 @@ a specific mesh selected, but most will work on all meshes if you let it!
 Next we reach the mesh editing tabs!
 Mesh editing is divided up into three categories: General, Merging, and Origin Editing.
 
-General:
+#### General:
 This section is obviously for the more general options that didn't fit a theme well enough to earn
 their own tab.
 
@@ -238,7 +239,7 @@ position to the nearest .25 unit in every dimension.
 7) "Delete Mesh" will delete the currently selected mesh from the file! This can't be undone so make a backup!
 
 
-Merging:
+#### Merging:
 This section is for merging vertices together and merging meshes together! It is divided up into two columns
 to make better use of the space.
 
@@ -263,7 +264,7 @@ to a torso of a body) it will destroy the non visible faces where the arm is att
 that are within the maximum distance from each other!
 
 
-Origns Editing:
+#### Origins Editing:
 If you want to adjust how you scale or rotate an object, you probably need to adjust the object's origin!
 Rotating a mesh in picoCAD will rotate it around the object's origin, so adjusting where the origin is
 makes it rotate differently!
@@ -289,7 +290,7 @@ And finally there's a back button to return to the main tool menu!
 
 
 
-How to use the File Editing Menu:
+### How to use the File Editing Menu:
 The file editing menu is used to merge picoCAD files!
 The controls are relatively simple. MAKE A BACKUP. If you merge too much into your picoCAD save and it
 grows too large it is possible that picoCAD won't be able to load the file!
@@ -310,7 +311,7 @@ Is it the simplest of workflows? No, but it's an option!
 
 
 
-How to use the Image Color Palette Editing Menu:
+### How to use the Image Color Palette Editing Menu:
 This menu is an experimental attempt at making a tool to help convert images to the pico8 (and thus
 picoCAD) color palette!
 
@@ -332,9 +333,11 @@ of that swatch, or increasing the influence weights of similar colors. It will l
 checking the output results. If you want the exact equation for calculating distance assuming
 that the channel weight and total weight are non-zero it is as follows:
 
+```
 channel_distance = (pixel_channel - swatch_channel) / channel_weight
 total_weighted_distance = square_root(red_channel_distance^2 +
 			green_channel_distance^2 + blue_channel_distance^2) / total_weight
+```
 
 The tool checks the distance from all pixels to all color swatches and chooses the swatch with the
 smallest weighted distance as the output color!
@@ -354,7 +357,7 @@ discord in the picoCAD community or via some other channel!
 
 
 
-A little advice for more experienced modelers who want to use my tool:
+_A little advice for more experienced modelers who want to use my tool:_
 If your model has a lot of faces it can be difficult for my packing tool to fit
 them all into the space, especially since this version of the tool doesn't include
 mirroring UVs (it's on the todo list!). If you have a lot of faces I'd probably
