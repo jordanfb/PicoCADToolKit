@@ -1008,7 +1008,9 @@ class MeshEditingMaster(Page):
 			self.mesh_to_copy_from_dropdown.build_choices_from_picoSave_without_all(self.picoToolData.picoSave)
 		self.picoToolData.add_picoSave_listener(self.mesh_to_copy_from_dropdown.build_choices_from_picoSave_without_all)
 		# when the number of meshes changes or the file gets reloaded it'll recreate this list automatically!
-		self.merge_meshes_button = tk.Button(self.left_merging_frame, text = "Copy Mesh into Selected Mesh", command = self.merge_mesh)
+		self.copy_meshes_button = tk.Button(self.left_merging_frame, text="Copy Mesh into Selected Mesh", command=self.copy_mesh)
+		self.copy_meshes_button.pack()
+		self.merge_meshes_button = tk.Button(self.left_merging_frame, text="Merge Mesh into Selected Mesh", command=self.merge_mesh)
 		self.merge_meshes_button.pack()
 
 		label = tk.Label(self.right_merging_frame, text="Merge Vertices:")
@@ -1183,7 +1185,7 @@ class MeshEditingMaster(Page):
 			o.move_origin_to_world_position(rounded)
 		self.picoToolData.notify_update_render_listeners()
 
-	def merge_mesh(self):
+	def merge_mesh(self, delete_origin=True):
 		if self.picoToolData.selected_mesh_index == -1:
 			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into")
 		elif self.mesh_to_copy_from_dropdown.output_int == self.picoToolData.selected_mesh_index:
@@ -1193,7 +1195,16 @@ class MeshEditingMaster(Page):
 			objs = self.picoToolData.get_selected_mesh_objects()
 			for copy_into in objs:
 				copy_into.combine_other_object(self.picoToolData.picoSave.objects[self.mesh_to_copy_from_dropdown.output_int - 1])
+			# optionally delete the original mesh (merge)
+			if delete_origin:
+				self.picoToolData.picoSave.remove_object(self.mesh_to_copy_from_dropdown.output_int - 1)
+				# update the UI, object list changed!
+				self.picoToolData.notify_picoSave_listeners()
+
 		self.picoToolData.notify_update_render_listeners()
+
+	def copy_mesh(self):
+		self.merge_mesh(delete_origin=False)
 
 	def return_to_tools_page(self):
 		self.show_page(self.mainView.tool_page)
