@@ -10,7 +10,6 @@ Please ignore the mess.
 
 
 import tkinter as tk
-import threading
 import sys
 import os
 from tkinter.filedialog import askopenfilename

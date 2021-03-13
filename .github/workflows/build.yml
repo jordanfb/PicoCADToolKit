@@ -55,11 +55,11 @@ jobs:
             CMD_BUILD: pyinstaller --clean -F -y -n "PicoToolkit" --add-data="files\colorwheel.png;files" --add-data="README_FOR_PICOTOOLKIT.md;." toolkitUI.py
             OUT_FILE_NAME: PicoToolkit.exe
             ASSET_MIME: application/vnd.microsoft.portable-executable
-          # - os: ubuntu-latest
-          #   TARGET: ubuntu
-          #   CMD_BUILD: pyinstaller --clean -y -n "PicoToolkit" --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.md:." toolkitUI.py
-          #   OUT_FILE_NAME: PicoToolkit
-          #   ASSET_MIME: application/vnd.microsoft.portable-executable
+          - os: ubuntu-latest
+            TARGET: ubuntu
+            CMD_BUILD: pyinstaller --clean -y -n "PicoToolkit" --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.md:." toolkitUI.py
+            OUT_FILE_NAME: PicoToolkit
+            # ASSET_MIME: application/vnd.microsoft.portable-executable
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python 3.9
@@ -67,9 +67,9 @@ jobs:
       with:
         python-version: 3.9
     - name: Install dependencies
+            # python -m pip install --upgrade pip # this was the first command but it was erroring on Windows
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r build_requirements.txt
     - name: Build with pyinstaller for ${{matrix.TARGET}}
       run: ${{matrix.CMD_BUILD}}
     - name: Load Release URL File from release job
