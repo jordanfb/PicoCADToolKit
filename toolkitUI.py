@@ -1267,7 +1267,7 @@ class MeshEditingMaster(Page):
 				o.vertices[i] = t
 		self.picoToolData.notify_update_render_listeners()
 
-  def merge_mesh(self, delete_origin=True):
+	def merge_mesh(self, delete_origin=True):
 		if self.picoToolData.selected_mesh_index == -1:
 			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into")
 		elif self.mesh_to_copy_from_dropdown.output_int == self.picoToolData.selected_mesh_index:
