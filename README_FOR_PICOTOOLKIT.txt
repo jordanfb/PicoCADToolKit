@@ -209,16 +209,26 @@ the average position of the vertices!
 "Scale Object Position" is relative to the world origin. If you scale multiple meshes up you may also
 have to scale up their positions to keep them the same relative distance apart!
 
-2) If you flip the mesh (i.e. scale any number of dimensions by -1) this will also flip the normals inside
+2) Mesh Rotation.
+If you want to rotate your mesh around an axis by a certain number of degrees this is the tool for you!
+Enter in how many degrees you want to rotate the mesh by, and then press the button to rotate the mesh!
+It will first rotate around the x axis, then the y axis, then the z axis, not all at once. Keep that in
+mind when deciding how to rotate it!
+Also keep in mind the fact that rotating the mesh can make the file size expand as you move vertices
+from nice round numbers like (5.25) to (5.123123141 etc.). If you want to reduce the file size you can
+click the "Round vertices to nearest .25" lower down on this page which will round each vertex position
+to the nearest 0, .25, .5, or .75 along all three axes.
+
+3) If you flip the mesh (i.e. scale any number of dimensions by -1) this will also flip the normals inside
 out! Not to worry, you can use this "Flip Mesh Normals" button to flip them back again. Or, if you want
 your mesh to appear inside out you can use this button to achieve that!
 
-3) "Remove Faces with <3 Vertices"
+4) "Remove Faces with <3 Vertices"
 If you combine meshes or shrink down faces of a primative to achieve the shape you want you may end up with
 invisible faces! One way to get rid of them is to merge the vertices (in the "Merging" tab) or you can remove
 those faces directly with this button!
 
-4) "Round vertices to nearest .25"
+5) "Round vertices to nearest .25"
 If you are moving vertices around with scaling or other tools you may find that the vertices aren't precisely
 on the snapping points in picoCAD! If you want them to be, click this button and it will round each vertex
 position to the nearest .25 unit in every dimension.

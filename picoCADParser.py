@@ -24,7 +24,7 @@ Todo:
 - - [ ] Tool for separating objects if they aren't connected? Hmmmm
 	- this is only really useful if there's a way to split an edge, which I'm not sure how to make so maybe not just yet
 - - [ ] Tool for merging/unmerging the uvs of a mirrored face?
-- - [ ] Some way to better determine which mesh is which! A 3d render view? lol
+- - [x] Some way to better determine which mesh is which! A 3d render view? lol
 	- it does seem like I need some way to select which object/face to edit, for this and for the mesh scaling too.
 	- Turns out the best way to do this is with some sort of graphical interface, lots of buttons on the side, vaguely like CAD software?
 		- Who'd have thunk it!
@@ -33,9 +33,16 @@ Todo:
 - - [ ] Consider changing around the output_save_text function of a picoSave to use the parsed header functions not the original text
 - - [ ] Stats page to show how many vertices, faces, objects, etc there are in your model!
 	- apparently the max file size is around 27kb, so an approximate "percentage full" meter would be useful!
+	- it may actually be 17kb of mesh data = full, not quite sure!
 - - [x] Consider making a tool to convert faces from vertex colored to textured via texture map, by either finding a spot on the texture
 	that is the right color and setting the UVs there or by making a spot and setting the UVs there.
-- - [ ] A button to set a particular face setting for all of the faces of an object
+- - [x] A button to set a particular face setting for all of the faces of an object
+- - [ ] Delete object button?
+- - [ ] Clone object button?
+- - [x] Move object into mesh (put this next to the copy object into object button, this would delete the original)
+- - [x] Rotate object by degrees
+	- have the input be like the scale input just with degrees along each axis!
+	- Should be simple once I implement rotational matrices
 
 
 Current Changelog:
@@ -96,6 +103,16 @@ color found
 - Implemented a "change background color" button that will change the background color of the render views between white and all 16 pico8
 colors
 - Added a Mac build!
+
+
+v0.4: The Image Palette Converter Update
+- Added a tool to convert any image to the picoCAD/pico8 palette
+	- includes ability to weight each color from the palette to make it more likely or entirely remove it
+- Fixed a bug with removing all the faces from an object messing up the save file (but it still won't load in picoCAD!)
+- Fixed a bug where merging vertices wouldn't make the render views update
+- Renamed "Delete Hidden Faces" checkbox for merging vertices to "Delete Contained Faces" to try to emphasize how it's not perfect
+- Added a tool to rotate a mesh around its origin by a certain number of degrees
+- Cleaned up some UI
 """
 
 
@@ -739,9 +756,12 @@ class PicoObject:
 			o += "\n  {" + ",".join([float_to_str(x) for x in v]) + "},"
 		o = o[:-1] # remove the last comma
 		o += "\n },\n f={"
+		has_a_comma = False
 		for f in self.faces:
 			o += "\n  " + f.output_save_text() +","
-		o = o[:-1] # remove the last comma!
+			has_a_comma = True
+		if has_a_comma:
+			o = o[:-1] # remove the last comma!
 		o += "\n } \n}"
 		return o
 
@@ -1216,6 +1236,24 @@ def make_scale_matrix(scale):
 
 def make_offset_matrix(delt_pos):
 	output = [[1,0,0,delt_pos[0]], [0,1,0,delt_pos[1]], [0,0,1,delt_pos[2]], [0,0,0,1]]
+	return output
+
+def make_x_rotation_matrix(x_radians):
+	cos = math.cos(x_radians)
+	sin = math.sin(x_radians)
+	output = [[1, 0, 0, 0], [0, cos, -sin, 0], [0, sin, cos, 0], [0, 0, 0, 1]]
+	return output
+
+def make_y_rotation_matrix(y_radians):
+	cos = math.cos(y_radians)
+	sin = math.sin(y_radians)
+	output = [[cos, 0, sin, 0], [0, 1, 0, 0], [-sin, 0, cos, 0], [0, 0, 0, 1]]
+	return output
+
+def make_z_rotation_matrix(z_radians):
+	cos = math.cos(z_radians)
+	sin = math.sin(z_radians)
+	output = [[cos, -sin, 0, 0], [sin, cos, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
 	return output
 
 def load_picoCAD_save(filepath):

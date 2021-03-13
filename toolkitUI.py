@@ -512,7 +512,7 @@ class ImageColorEditingPage(Page):
 		self.update_image = tk.Button(self.ui_frame, text = "Convert and Save Input Image", command = self.convert_and_save_input)
 		self.update_image.pack()
 
-		self.quitButton = tk.Button(self.ui_frame, text = "Back", command = self.return_to_tools_page)
+		self.quitButton = tk.Button(self.ui_frame, text = "Back", command = self.return_to_input_page)
 		self.quitButton.pack()
 
 		self.select_color(0)
@@ -560,6 +560,9 @@ class ImageColorEditingPage(Page):
 
 	def return_to_tools_page(self):
 		self.show_page(self.mainView.tool_page)
+
+	def return_to_input_page(self):
+		self.show_page(self.mainView.main_page)
 
 	def show(self):
 		# this is special and full screen so there's some finnicky-ness with how I'm displaying and hiding it.
@@ -734,6 +737,9 @@ class IntroPage(Page):
 		self.loadFileButton = tk.Button(self, text = "Start Editing!", command = self.start_editing)
 		self.loadFileButton.pack()
 
+		self.mesh_editing_button = tk.Button(self, text = "Open Image Color Palette Editing Menu", command = self.open_image_color_editing)
+		self.mesh_editing_button.pack()
+
 
 		# add some space:
 		# label = tk.Label(self, text="")
@@ -763,6 +769,9 @@ class IntroPage(Page):
 		backup_filepath = get_associated_filename(self.filename, "_backup", ".txt", make_unique = True)
 		self.picoToolData.picoSave.save_to_file(backup_filepath)
 		self.last_backup_saved.set(backup_filepath)
+
+	def open_image_color_editing(self):
+		self.show_page(self.mainView.image_color_editing_page)
 
 	def choose_filename_dialog(self):
 		self.filename = askopenfilename(initialdir = get_save_location(), title = "Open picoCAD file")
@@ -1023,8 +1032,8 @@ class MeshEditingMaster(Page):
 		self.merge_faces_distance_entry.pack()
 		# Remove Hidden Faces
 		self.destroy_hidden_faces_value = tk.IntVar()
-		self.destroy_hidden_faces_value.set(1)
-		self.destroy_hidden_faces_checkbox = tk.Checkbutton(self.right_merging_frame, text = "Destroy Hidden Faces", variable = self.destroy_hidden_faces_value, onvalue = 1, offvalue = 0)
+		self.destroy_hidden_faces_value.set(0)
+		self.destroy_hidden_faces_checkbox = tk.Checkbutton(self.right_merging_frame, text = "Destroy Contained Faces", variable = self.destroy_hidden_faces_value, onvalue = 1, offvalue = 0)
 		self.destroy_hidden_faces_checkbox.pack()
 		# now the button to actually do it!
 		self.merge_faces_button = tk.Button(self.right_merging_frame, text = "Merge Overlapping Vertices", command = self.merge_overlapping_verts)
@@ -1036,9 +1045,9 @@ class MeshEditingMaster(Page):
 		self.scale_factor_frame = tk.Frame(self.general_mesh_editing_frame)
 		self.scale_factor_frame.pack()
 		# now add three float entries!
-		self.x_scale_entry = FloatEntry(self.scale_factor_frame, 1)
-		self.y_scale_entry = FloatEntry(self.scale_factor_frame, 1)
-		self.z_scale_entry = FloatEntry(self.scale_factor_frame, 1)
+		self.x_scale_entry = FloatEntry(self.scale_factor_frame, 1, width=5)
+		self.y_scale_entry = FloatEntry(self.scale_factor_frame, 1, width=5)
+		self.z_scale_entry = FloatEntry(self.scale_factor_frame, 1, width=5)
 		label = tk.Label(self.scale_factor_frame, text="X:")
 		label.pack(side="left")
 		self.x_scale_entry.pack(side="left")
@@ -1055,6 +1064,27 @@ class MeshEditingMaster(Page):
 		self.scale_mesh_button.pack(side="left", padx=(0,10))
 		self.scale_mesh_object_button = tk.Button(self.scale_buttons_frame, text = "Scale Object Position", command = self.scale_object_position)
 		self.scale_mesh_object_button.pack(side="right", padx=(10,0))
+
+		# now implement the mesh rotation!
+		label = tk.Label(self.general_mesh_editing_frame, text="Rotate by (degrees):")
+		label.pack(side="top", fill="both", expand=False)
+		self.rotate_factor_frame = tk.Frame(self.general_mesh_editing_frame)
+		self.rotate_factor_frame.pack()
+		# now add three float entries!
+		self.x_rotate_entry = FloatEntry(self.rotate_factor_frame, 0, width=5)
+		self.y_rotate_entry = FloatEntry(self.rotate_factor_frame, 0, width=5)
+		self.z_rotate_entry = FloatEntry(self.rotate_factor_frame, 0, width=5)
+		label = tk.Label(self.rotate_factor_frame, text="X:")
+		label.pack(side="left")
+		self.x_rotate_entry.pack(side="left")
+		label = tk.Label(self.rotate_factor_frame, text="Y:")
+		label.pack(side="left")
+		self.y_rotate_entry.pack(side="left")
+		label = tk.Label(self.rotate_factor_frame, text="Z:")
+		label.pack(side="left")
+		self.z_rotate_entry.pack(side="left")
+		self.scale_mesh_button = tk.Button(self.general_mesh_editing_frame, text = "Rotate Vertices Around Mesh Origin", command = self.rotate_mesh)
+		self.scale_mesh_button.pack()
 
 		label = tk.Label(self.general_mesh_editing_frame, text="") # just add some space here to separate the scaling from the rest
 		label.pack(side="top", fill="both", expand=False)
@@ -1083,9 +1113,9 @@ class MeshEditingMaster(Page):
 		self.origin_adjustment_frame = tk.Frame(self.origins_editing_tab)
 		self.origin_adjustment_frame.pack()
 		# now add three float entries!
-		self.x_origin_entry = FloatEntry(self.origin_adjustment_frame, 0)
-		self.y_origin_entry = FloatEntry(self.origin_adjustment_frame, 0)
-		self.z_origin_entry = FloatEntry(self.origin_adjustment_frame, 0)
+		self.x_origin_entry = FloatEntry(self.origin_adjustment_frame, 0, width=5)
+		self.y_origin_entry = FloatEntry(self.origin_adjustment_frame, 0, width=5)
+		self.z_origin_entry = FloatEntry(self.origin_adjustment_frame, 0, width=5)
 		label = tk.Label(self.origin_adjustment_frame, text="X:")
 		label.pack(side="left")
 		self.x_origin_entry.pack(side="left")
@@ -1214,7 +1244,30 @@ class MeshEditingMaster(Page):
 				self.picoToolData.notify_picoSave_listeners()
 		self.picoToolData.notify_update_render_listeners()
 
-	def merge_mesh(self, delete_origin=True):
+	def rotate_mesh(self):
+		# convert them to degrees, make the matrices, then apply the rotations!
+		x_radians = math.radians(self.x_rotate_entry.float_value)
+		y_radians = math.radians(self.y_rotate_entry.float_value)
+		z_radians = math.radians(self.z_rotate_entry.float_value)
+		print("Rotating mesh(es) by " + str(self.x_rotate_entry.float_value) + " degrees X, then " \
+					+ str(self.y_rotate_entry.float_value) + " degrees Y, then " \
+					+ str(self.z_rotate_entry.float_value) + " degrees Z")
+		objs = self.picoToolData.get_selected_mesh_objects()
+		x_rot_mat = make_x_rotation_matrix(x_radians)
+		y_rot_mat = make_y_rotation_matrix(y_radians)
+		z_rot_mat = make_z_rotation_matrix(z_radians)
+		for o in objs:
+			# rotate all the vertices!
+			o.dirty = True
+			for i in range(len(o.vertices)):
+				t = o.vertices[i]
+				t = t.mat_mult(x_rot_mat)
+				t = t.mat_mult(y_rot_mat)
+				t = t.mat_mult(z_rot_mat)
+				o.vertices[i] = t
+		self.picoToolData.notify_update_render_listeners()
+
+  def merge_mesh(self, delete_origin=True):
 		if self.picoToolData.selected_mesh_index == -1:
 			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into")
 		elif self.mesh_to_copy_from_dropdown.output_int == self.picoToolData.selected_mesh_index:
@@ -1290,6 +1343,7 @@ class MeshEditingMaster(Page):
 			removed_faces += f
 		print("Removed " + str(removed) + " vertices and " + str(removed_faces) + " faces")
 		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
+		self.picoToolData.notify_update_render_listeners()
 
 class UVMasterPage(Page):
 	def __init__(self, master, mainView, picoToolData):
@@ -2376,9 +2430,6 @@ class MainToolPage(Page):
 		self.mesh_editing_button.pack()
 
 		self.mesh_editing_button = tk.Button(self, text = "Open File Editing Menu", command = self.open_file_editing)
-		self.mesh_editing_button.pack()
-
-		self.mesh_editing_button = tk.Button(self, text = "Open Image Color Palette Editing Menu", command = self.open_image_color_editing)
 		self.mesh_editing_button.pack()
 
 		self.debug_menu_button = tk.Button(self, text = "Open Debug Menu", command = self.open_debug_menu)
