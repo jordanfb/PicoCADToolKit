@@ -104,7 +104,6 @@ colors
 import os
 import sys
 import math
-import copy
 from PIL import Image, ImageDraw
 
 
@@ -916,7 +915,7 @@ class PicoSave:
 
 	def duplicate_object(self, obj):
 		self.dirty = True
-		obj_new = copy.deepcopy(obj)
+		obj_new = obj.copy()
 		obj_new.dirty = True
 		obj_new.name += "_dup"
 		self.objects.append(obj_new)
