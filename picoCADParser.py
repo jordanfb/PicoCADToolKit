@@ -765,6 +765,9 @@ class PicoObject:
 		o += "\n } \n}"
 		return o
 
+	def __repr__(self):
+		return self.name + ' ' + str(self.pos)
+
 class PicoSave:
 	def __init__(self, filepath, original_text, objects):
 		self.original_text = original_text
@@ -924,6 +927,19 @@ class PicoSave:
 		self.dirty = False
 		for o in self.objects:
 			o.mark_clean()
+
+	def remove_object(self, index):
+		self.dirty = True
+		obj_removed = self.objects.pop(index)
+		print("Removed object: " + str(obj_removed))
+
+	def duplicate_object(self, obj):
+		self.dirty = True
+		obj_new = obj.copy()
+		obj_new.dirty = True
+		obj_new.name += "_dup"
+		self.objects.append(obj_new)
+		print("Duplicated object as: " + str(obj_new))
 
 	def find_color_coordinates(self, color_index):
 		# search through the texture stored in this save file and try to find the color!
