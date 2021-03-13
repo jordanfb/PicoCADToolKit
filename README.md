@@ -113,8 +113,12 @@ colors
 Thanks so much to Johan Peitz [Twitter: @johanpeitz](https://twitter.com/johanpeitz) for making picoCAD and inspiring this project!
 
 Thanks so much to everyone who has made this project possible!
+
 Here they are listed in order that they contributed to the project:
 
+
 Jordan Faas-Bush [Twitter: @quickpocket](https://twitter.com/quickpocket)
+
 VinnyFettuccine
+
 Gokhan Solak [Twitter: @artsolak](https://twitter.com/artsolak), [Github: gokhansolak](https://github.com/gokhansolak)
