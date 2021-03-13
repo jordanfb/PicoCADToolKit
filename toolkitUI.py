@@ -512,7 +512,7 @@ class ImageColorEditingPage(Page):
 		self.update_image = tk.Button(self.ui_frame, text = "Convert and Save Input Image", command = self.convert_and_save_input)
 		self.update_image.pack()
 
-		self.quitButton = tk.Button(self.ui_frame, text = "Back", command = self.return_to_tools_page)
+		self.quitButton = tk.Button(self.ui_frame, text = "Back", command = self.return_to_input_page)
 		self.quitButton.pack()
 
 		self.select_color(0)
@@ -560,6 +560,9 @@ class ImageColorEditingPage(Page):
 
 	def return_to_tools_page(self):
 		self.show_page(self.mainView.tool_page)
+
+	def return_to_input_page(self):
+		self.show_page(self.mainView.main_page)
 
 	def show(self):
 		# this is special and full screen so there's some finnicky-ness with how I'm displaying and hiding it.
@@ -734,6 +737,9 @@ class IntroPage(Page):
 		self.loadFileButton = tk.Button(self, text = "Start Editing!", command = self.start_editing)
 		self.loadFileButton.pack()
 
+		self.mesh_editing_button = tk.Button(self, text = "Open Image Color Palette Editing Menu", command = self.open_image_color_editing)
+		self.mesh_editing_button.pack()
+
 
 		# add some space:
 		# label = tk.Label(self, text="")
@@ -763,6 +769,9 @@ class IntroPage(Page):
 		backup_filepath = get_associated_filename(self.filename, "_backup", ".txt", make_unique = True)
 		self.picoToolData.picoSave.save_to_file(backup_filepath)
 		self.last_backup_saved.set(backup_filepath)
+
+	def open_image_color_editing(self):
+		self.show_page(self.mainView.image_color_editing_page)
 
 	def choose_filename_dialog(self):
 		self.filename = askopenfilename(initialdir = get_save_location(), title = "Open picoCAD file")
@@ -1021,8 +1030,8 @@ class MeshEditingMaster(Page):
 		self.merge_faces_distance_entry.pack()
 		# Remove Hidden Faces
 		self.destroy_hidden_faces_value = tk.IntVar()
-		self.destroy_hidden_faces_value.set(1)
-		self.destroy_hidden_faces_checkbox = tk.Checkbutton(self.right_merging_frame, text = "Destroy Hidden Faces", variable = self.destroy_hidden_faces_value, onvalue = 1, offvalue = 0)
+		self.destroy_hidden_faces_value.set(0)
+		self.destroy_hidden_faces_checkbox = tk.Checkbutton(self.right_merging_frame, text = "Destroy Contained Faces", variable = self.destroy_hidden_faces_value, onvalue = 1, offvalue = 0)
 		self.destroy_hidden_faces_checkbox.pack()
 		# now the button to actually do it!
 		self.merge_faces_button = tk.Button(self.right_merging_frame, text = "Merge Overlapping Vertices", command = self.merge_overlapping_verts)
@@ -1185,7 +1194,7 @@ class MeshEditingMaster(Page):
 
 	def merge_mesh(self):
 		if self.picoToolData.selected_mesh_index == -1:
-			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into")
+			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into.")
 		else:
 			# copy it in!
 			objs = self.picoToolData.get_selected_mesh_objects()
@@ -1249,6 +1258,7 @@ class MeshEditingMaster(Page):
 			removed_faces += f
 		print("Removed " + str(removed) + " vertices and " + str(removed_faces) + " faces")
 		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
+		self.picoToolData.notify_update_render_listeners()
 
 class UVMasterPage(Page):
 	def __init__(self, master, mainView, picoToolData):
@@ -2335,9 +2345,6 @@ class MainToolPage(Page):
 		self.mesh_editing_button.pack()
 
 		self.mesh_editing_button = tk.Button(self, text = "Open File Editing Menu", command = self.open_file_editing)
-		self.mesh_editing_button.pack()
-
-		self.mesh_editing_button = tk.Button(self, text = "Open Image Color Palette Editing Menu", command = self.open_image_color_editing)
 		self.mesh_editing_button.pack()
 
 		self.debug_menu_button = tk.Button(self, text = "Open Debug Menu", command = self.open_debug_menu)
