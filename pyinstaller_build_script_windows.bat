@@ -8,6 +8,6 @@
 
 : consider --onefile and --windowed
 
-pyinstaller --clean --windowed -y -n "PicoToolkit" --add-data="files\colorwheel.png;files" --add-data="README_FOR_PICOTOOLKIT.txt;." toolkitUI.py
+pyinstaller --clean --windowed -y -n "PicoToolkit" --add-data="files\colorwheel.png;files" --add-data="README_FOR_PICOTOOLKIT.md;." toolkitUI.py
 
 pause
