@@ -1186,6 +1186,8 @@ class MeshEditingMaster(Page):
 	def merge_mesh(self):
 		if self.picoToolData.selected_mesh_index == -1:
 			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into")
+		elif self.mesh_to_copy_from_dropdown.output_int == self.picoToolData.selected_mesh_index:
+			print("Error: Cannot copy to a mesh from itself! Choose a different mesh")
 		else:
 			# copy it in!
 			objs = self.picoToolData.get_selected_mesh_objects()
