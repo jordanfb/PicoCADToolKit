@@ -233,6 +233,10 @@ If you are moving vertices around with scaling or other tools you may find that 
 on the snapping points in picoCAD! If you want them to be, click this button and it will round each vertex
 position to the nearest .25 unit in every dimension.
 
+6) "Duplicate Mesh" will duplicate the currently selected mesh and append _dup to the name of the copy!
+
+7) "Delete Mesh" will delete the currently selected mesh from the file! This can't be undone so make a backup!
+
 
 Merging:
 This section is for merging vertices together and merging meshes together! It is divided up into two columns
@@ -245,7 +249,9 @@ into one object! This menu is for you.
 2) It will copy the contents of that mesh into the selected mesh to edit (that you can set in the header)
 when you press the "Copy Mesh into Selected Mesh" button.
 It will not allow you to copy a mesh into every mesh at once (because that would include itself!)
-3) There is currently no way to separate these meshes so PLEASE MAKE A BACKUP
+3) If you want to move the contents of a mesh into another mesh and remove the original use "Merge Mesh Into
+Selected Mesh" instead of Copy. This will remove the original mesh and move it into the selected mesh.
+4) There is currently no way to separate these meshes so PLEASE MAKE A BACKUP
 
 On the right is the menu for merging vertices:
 If you like overlapping vertices to create the perfect shape this menu is for you!
