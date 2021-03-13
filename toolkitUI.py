@@ -1068,6 +1068,11 @@ class MeshEditingMaster(Page):
 		self.remove_invalid_faces_button = tk.Button(self.general_mesh_editing_frame, text = "Round Vertices to Nearest .25", command = self.round_vertices)
 		self.remove_invalid_faces_button.pack()
 
+		self.duplicate_mesh_button = tk.Button(self.general_mesh_editing_frame, text = "Duplicate mesh", command = self.duplicate_mesh)
+		self.duplicate_mesh_button.pack()
+
+		self.delete_mesh_button = tk.Button(self.general_mesh_editing_frame, text = "Delete mesh", command = self.delete_mesh)
+		self.delete_mesh_button.pack()
 
 		# make the origins editing tab!
 		self.origins_editing_tab
@@ -1185,6 +1190,30 @@ class MeshEditingMaster(Page):
 			o.move_origin_to_world_position(rounded)
 		self.picoToolData.notify_update_render_listeners()
 
+	def duplicate_mesh(self):
+		objs = self.picoToolData.get_selected_mesh_objects()
+		for obj in objs:
+			self.picoToolData.picoSave.duplicate_object(obj)
+		# update the UI, object list changed!
+		self.picoToolData.notify_picoSave_listeners()
+
+		self.picoToolData.notify_update_render_listeners()
+
+	def delete_mesh(self):
+		if self.picoToolData.selected_mesh_index == -1:
+			print("Error: Deleting all meshes isn't allowed! Choose a specific mesh to delete")
+		else:
+			msg_box = tk.messagebox.askquestion(
+				'Are you sure?',
+				'Are you sure you want to delete the object? This can\'t be reverted. Please make a backup.',
+				icon='warning'
+			)
+			if msg_box == 'yes':
+				self.picoToolData.picoSave.remove_object(self.picoToolData.selected_mesh_index-1)
+				# update the UI, object list changed!
+				self.picoToolData.notify_picoSave_listeners()
+		self.picoToolData.notify_update_render_listeners()
+
 	def merge_mesh(self, delete_origin=True):
 		if self.picoToolData.selected_mesh_index == -1:
 			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into")
@@ -1200,7 +1229,6 @@ class MeshEditingMaster(Page):
 				self.picoToolData.picoSave.remove_object(self.mesh_to_copy_from_dropdown.output_int - 1)
 				# update the UI, object list changed!
 				self.picoToolData.notify_picoSave_listeners()
-
 		self.picoToolData.notify_update_render_listeners()
 
 	def copy_mesh(self):

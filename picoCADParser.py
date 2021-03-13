@@ -104,6 +104,7 @@ colors
 import os
 import sys
 import math
+import copy
 from PIL import Image, ImageDraw
 
 
@@ -912,6 +913,14 @@ class PicoSave:
 		self.dirty = True
 		obj_removed = self.objects.pop(index)
 		print("Removed object: " + str(obj_removed))
+
+	def duplicate_object(self, obj):
+		self.dirty = True
+		obj_new = copy.deepcopy(obj)
+		obj_new.dirty = True
+		obj_new.name += "_dup"
+		self.objects.append(obj_new)
+		print("Duplicated object as: " + str(obj_new))
 
 	def find_color_coordinates(self, color_index):
 		# search through the texture stored in this save file and try to find the color!
