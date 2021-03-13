@@ -24,7 +24,7 @@ Todo:
 - - [ ] Tool for separating objects if they aren't connected? Hmmmm
 	- this is only really useful if there's a way to split an edge, which I'm not sure how to make so maybe not just yet
 - - [ ] Tool for merging/unmerging the uvs of a mirrored face?
-- - [ ] Some way to better determine which mesh is which! A 3d render view? lol
+- - [x] Some way to better determine which mesh is which! A 3d render view? lol
 	- it does seem like I need some way to select which object/face to edit, for this and for the mesh scaling too.
 	- Turns out the best way to do this is with some sort of graphical interface, lots of buttons on the side, vaguely like CAD software?
 		- Who'd have thunk it!
@@ -36,11 +36,11 @@ Todo:
 	- it may actually be 17kb of mesh data = full, not quite sure!
 - - [x] Consider making a tool to convert faces from vertex colored to textured via texture map, by either finding a spot on the texture
 	that is the right color and setting the UVs there or by making a spot and setting the UVs there.
-- - [ ] A button to set a particular face setting for all of the faces of an object
+- - [x] A button to set a particular face setting for all of the faces of an object
 - - [ ] Delete object button?
 - - [ ] Clone object button?
-- - [ ] Move object into mesh (put this next to the copy object into object button, this would delete the original)
-- - [ ] Rotate object by degrees
+- - [x] Move object into mesh (put this next to the copy object into object button, this would delete the original)
+- - [x] Rotate object by degrees
 	- have the input be like the scale input just with degrees along each axis!
 	- Should be simple once I implement rotational matrices
 
@@ -111,6 +111,8 @@ v0.4: The Image Palette Converter Update
 - Fixed a bug with removing all the faces from an object messing up the save file (but it still won't load in picoCAD!)
 - Fixed a bug where merging vertices wouldn't make the render views update
 - Renamed "Delete Hidden Faces" checkbox for merging vertices to "Delete Contained Faces" to try to emphasize how it's not perfect
+- Added a tool to rotate a mesh around its origin by a certain number of degrees
+- Cleaned up some UI
 """
 
 
