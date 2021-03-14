@@ -61,7 +61,7 @@ jobs:
                 python3 -m PyInstaller --clean -F -y -n "PicoToolkit" --hidden-import='PIL._tkinter_finder' --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.md:." toolkitUI.py &&
                 cd dist/ &&
                 zip -r9 PicoToolkit_ubuntu.zip PicoToolkit
-            OUT_FILE_NAME: PicoToolkit
+            OUT_FILE_NAME: PicoToolkit_ubuntu.zip
             ASSET_MIME: application/x-elf
     steps:
     - uses: actions/checkout@v1
