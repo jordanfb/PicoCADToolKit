@@ -39,6 +39,7 @@ jobs:
     needs: createrelease
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -60,9 +61,9 @@ jobs:
             CMD_BUILD: >
                 python3 -m PyInstaller --clean -F -y -n "PicoToolkit" --hidden-import='PIL._tkinter_finder' --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.md:." toolkitUI.py &&
                 cd dist/ &&
-                zip -r9 PicoToolkit_ubuntu.zip PicoToolkit
-            OUT_FILE_NAME: PicoToolkit_ubuntu.zip
-            ASSET_MIME: application/x-elf
+                zip -r9 PicoToolkit_linux.zip PicoToolkit
+            OUT_FILE_NAME: PicoToolkit_linux.zip
+            ASSET_MIME: application/zip
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python 3.9
@@ -95,3 +96,17 @@ jobs:
         asset_path: ./dist/${{ matrix.OUT_FILE_NAME}}
         asset_name: ${{ matrix.OUT_FILE_NAME}}
         asset_content_type: ${{ matrix.ASSET_MIME}}
+  uploadreadme:
+    name: Upload Readme
+    runs-on: [ubuntu-latest]
+    steps:
+    - name: Upload Release Readme
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: ./README_FOR_PICOTOOLKIT.md
+        asset_name: ${{ README_FOR_PICOTOOLKIT.md }}
+        asset_content_type: ${{ text/markdown }}
