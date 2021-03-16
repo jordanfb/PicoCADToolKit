@@ -108,6 +108,12 @@ colors
 - Added a difference between "Merge Mesh Into" and "Copy Mesh Into". The first one will delete the original mesh, the second one won't.
 - Changed the instructions to the Markdown format and cleaned up the readme!
 
+## v0.4.1: The Vertex Merging Hotfix
+
+- Turns out the implementation of merging vertices forgot to actually delete the now unused vertices
+- This version fixed that, and added a button to manually delete unused vertices in case you wanted to clean up files that were previously merged and never got their vertices deleted
+
+
 # Thanks:
 
 Thanks so much to Johan Peitz [Twitter: @johanpeitz](https://twitter.com/johanpeitz) for making picoCAD and inspiring this project!

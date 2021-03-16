@@ -262,6 +262,9 @@ combined. This is true for instance if you've combined another mesh into this on
 to a torso of a body) it will destroy the non visible faces where the arm is attached to the shoulder.
 3) Once you're satisfied with the settings click "Merge Overlapping Vertices" and it will merge any vertices
 that are within the maximum distance from each other!
+4) There's also a button to "Remove Unused Vertices." The latest versions of the toolkit correctly remove
+the newly useless vertices after merging vertices but earlier version didn't. Use this button to clean up
+any files that were merged previously to version v0.4.1.
 
 
 #### Origins Editing:
