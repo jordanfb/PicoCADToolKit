@@ -1037,6 +1037,8 @@ class MeshEditingMaster(Page):
 		# now the button to actually do it!
 		self.merge_faces_button = tk.Button(self.right_merging_frame, text = "Merge Overlapping Vertices", command = self.merge_overlapping_verts)
 		self.merge_faces_button.pack()
+		self.remove_unused_vertices = tk.Button(self.right_merging_frame, text = "Remove Unused Vertices", command = self.remove_unused_vertices)
+		self.remove_unused_vertices.pack()
 
 		# now enter the scale object tool!
 		label = tk.Label(self.general_mesh_editing_frame, text="Scale by:")
@@ -1341,6 +1343,16 @@ class MeshEditingMaster(Page):
 			removed += v
 			removed_faces += f
 		print("Removed " + str(removed) + " vertices and " + str(removed_faces) + " faces")
+		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
+		self.picoToolData.notify_update_render_listeners()
+
+	def remove_unused_vertices(self):
+		objs = self.picoToolData.get_selected_mesh_objects()
+		removed = 0
+		for o in objs:
+			v = o.remove_unused_vertices()
+			removed += v
+		print("Removed " + str(removed) + " vertices")
 		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
 		self.picoToolData.notify_update_render_listeners()
 

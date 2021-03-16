@@ -521,7 +521,49 @@ class PicoObject:
 			# now remove all the faces that are covered!
 			for f in remove_faces:
 				self.faces.remove(f)
+		self.remove_unused_vertices() # then actually remove the vertices!
 		return len(to_be_removed), len(remove_faces)
+
+	def get_used_vertices(self):
+		# return a list of booleans for whether or not the vertex is used.
+		used = [False for i in range(len(self.vertices))]
+		for f in self.faces:
+			# check all the vertices
+			for i in f.vertices:
+				# print(i)
+				used[i-1] = True
+		return used
+
+	def remove_unused_vertices(self):
+		# this is a bit of a pain since it needs to decrement all the vertex indices for the increased ones...
+		# perhaps store a list of new indexes so that you can set your index to be that one? that makes sense yeah.
+		# solid!
+		new_indices = list(range(1, len(self.vertices)+1)) # the vertices are 1 indexed so shift it up by 1
+		# now if we delete, say, index 2, then we decrement all the vertices above 2 by that much
+		# so it would go from [0,1,2,3,4] to [0,1,-1,2,3]. Set the removed index to be -1 and then
+		# check to make sure no vertices use -1 when we're done!
+		used = self.get_used_vertices()
+		removed = len([x for x in used if x == False])
+		if removed == 0:
+			# no need to update the faces since we aren't removing anything!
+			return 0
+		for i in range(len(self.vertices)):
+			if not used[i]:
+				# then decrement all the following vertices!
+				new_indices[i] = -1
+				for j in range(i+1, len(self.vertices)):
+					new_indices[j] -= 1
+		for f in self.faces:
+			# then decrement all the face indices!
+			for i in range(len(f.vertices)):
+				f.vertices[i] = new_indices[f.vertices[i]-1] # set it to the new index!
+			f.dirty = True
+		for i in range(len(used)-1, -1, -1):
+			if not used[i]:
+				self.vertices.pop(i)
+		self.dirty = True
+		return removed
+
 
 	def remove_invalid_faces(self):
 		# loop over the faces and figure out if we should remove some because they have two or fewer unique vertices!
