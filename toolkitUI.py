@@ -2598,7 +2598,7 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 	def __init__(self, master, picoToolData):
 		self.picoToolData = picoToolData
 		tk.Frame.__init__(self, master)
-		container = tk.Frame(self) # this is used to make all of the pages the same size
+		container = tk.Frame(self, width=400) # this is used to make all of the pages the same size
 
 		self.winfo_toplevel().title("Jordan's picoCAD Toolkit")
 
@@ -2636,7 +2636,7 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 
 	def make_object_view_frame(self):
 		# make the object view frame I guess? It's currently just going to copy what picoCAD sees lol
-		container = tk.Frame(self)
+		container = tk.Frame(self, width=400)
 		self.render_view_frame = container
 		container.pack(side="right", fill="both", expand=False)
 
@@ -2719,6 +2719,9 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 		movement_buttons.pack(side="right")
 		movement_buttons = tk.Button(view_button_list, text = "reset", command = lambda:self.reset_position())
 		movement_buttons.pack(side="right")
+
+		view_button_list = tk.Frame(container)
+		view_button_list.pack(side="bottom", fill="both", expand=True)
 
 		render_origins_checkbox = tk.Checkbutton(view_button_list, text = "Render Origins", variable = self.picoToolData.render_origins, onvalue = 1, offvalue = 0, command = self.picoToolData.notify_update_render_listeners)
 		render_origins_checkbox.pack(side="right")
@@ -2847,7 +2850,7 @@ if __name__ == "__main__":
 
 	main.pack(side="top", fill="both", expand=True)
 	root.protocol("WM_DELETE_WINDOW", lambda : quit_check_for_save(root, picoToolData))
-	root.wm_geometry("800x450")
+	root.wm_geometry("800x460")
 	if(len(sys.argv) == 2):
 		# then make it full screen I guess
 		# root.attributes('-zoomed', True)  # This just maximizes it so we can see the window. It's nothing to do with fullscreen.
