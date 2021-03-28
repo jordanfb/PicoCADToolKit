@@ -26,10 +26,10 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Output Existing Release URL File
       # here we only create this file if we found the file correctly!
-      if: steps.find_release.outcome == 'success' || success()
+      if: (success() || failure()) && steps.find_release.outcome == 'success'
       run: echo "${{ steps.find_release.outputs.upload_url }}" > release_url.txt
     - name: Create Release
-      if: steps.find_release.outcome != 'success' || failure() # only create a release if it failed to find one!
+      if: (success() || failure()) && steps.find_release.outcome != 'success' # only create a release if it failed to find one!
       id: create_release
       uses: actions/create-release@v1
       env:
@@ -40,7 +40,7 @@ jobs:
         draft: false
         prerelease: false
     - name: Output Release URL File
-      if: steps.create_release.outcome == 'success' || success()
+      if: (success() || failure()) && steps.create_release.outcome == 'success'
       run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
     - name: Save Release URL File for publish
       if: always() # always run because if it failed to find a release it'll make one!
