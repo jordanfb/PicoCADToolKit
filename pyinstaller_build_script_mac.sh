@@ -6,4 +6,4 @@
 
 # Currently trying to make it so that the readme is at the same level as the output app! We'll see!
 
-pyinstaller --clean -y -n "PicoToolkit.app" --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.md:." toolkitUI.py
+pyinstaller --clean -y -n "PicoToolkit.app" --add-binary='/System/Library/Frameworks/Tk.framework/Tk':'tk' --add-binary='/System/Library/Frameworks/Tcl.framework/Tcl':'tcl' --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.md:." toolkitUI.py

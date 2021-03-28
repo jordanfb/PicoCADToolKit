@@ -59,7 +59,7 @@ jobs:
           - os: macos-latest
             TARGET: macos
             CMD_BUILD: >
-                pyinstaller --clean -y -n "PicoToolkit.app" --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.md:." toolkitUI.py &&
+                sudo pyinstaller --clean -y -n "PicoToolkit.app" --add-binary='/System/Library/Frameworks/Tk.framework/Tk':'tk' --add-binary='/System/Library/Frameworks/Tcl.framework/Tcl':'tcl' --add-data="files/colorwheel.png:files" --add-data="README_FOR_PICOTOOLKIT.md:." toolkitUI.py &&
                 cd dist/ &&
                 zip -r9 PicoToolkit.app.zip PicoToolkit.app/
             OUT_FILE_NAME: PicoToolkit.app.zip
