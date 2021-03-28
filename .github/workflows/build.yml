@@ -16,7 +16,19 @@ jobs:
     name: Create Release
     runs-on: [ubuntu-latest]
     steps:
+    - name: Find Existing Release
+      id: find_release
+      # check if the release exists!
+      # fail if it didn't exist!
+      uses: bruceadams/get-release@v1.2.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Output Existing Release URL File
+      # here we only create this file if we found the file correctly!
+      if: steps.find_release.outcome == 'success'
+      run: echo "${{ steps.find_release.outputs.upload_url }}" > release_url.txt
     - name: Create Release
+      if: failure() # only create a release if it failed to find one!
       id: create_release
       uses: actions/create-release@v1
       env:
@@ -27,8 +39,10 @@ jobs:
         draft: false
         prerelease: false
     - name: Output Release URL File
+      if: steps.create_release.outcome == 'success'
       run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
     - name: Save Release URL File for publish
+      if: always() # always run because if it failed to find a release it'll make one!
       uses: actions/upload-artifact@v1
       with:
         name: release_url
@@ -98,8 +112,19 @@ jobs:
         asset_content_type: ${{ matrix.ASSET_MIME}}
   uploadreadme:
     name: Upload Readme
+    needs: createrelease
     runs-on: [ubuntu-latest]
     steps:
+    - name: Load Release URL File from release job
+      uses: actions/download-artifact@v1
+      with:
+        name: release_url
+    - name: Get Release File Name & Upload URL
+      id: get_release_info
+      shell: bash
+      run: |
+        value=`cat release_url/release_url.txt`
+        echo ::set-output name=upload_url::$value
     - name: Upload Release Readme
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
