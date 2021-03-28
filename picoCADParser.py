@@ -564,6 +564,141 @@ class PicoObject:
 		self.dirty = True
 		return removed
 
+	def subdivide_into_fours(self):
+		# currently I'm not sure the best way to do subdivision. We'll start with a simple subdivison that will divide
+		# quads and tris into 4 smaller copies of themselves and everything else into triangles
+		# that's not perfect but it would definitely be helpful for things like fixing up UVs
+		# I can also implement a 9 version that divides quads and tris into 9s but that's a little more complicated
+		# Go over every edge of every face, create a new vertex between those two vertices, and then eventually replace
+		# all the faces with faces made from those vertices with correct UVs. This is actually a bit of a pain!
+		# It won't work well with faces that are twisted or faces that 
+		new_vertex_dict = {} # index this with (v1_index, v2_index) => new_vertex. I'll have to insert the same vertex both ways.
+		new_faces = [] # we replace the faces entirely, we simply append the vertices to the end of the existing vertices
+		for f in self.faces:
+			# create the four+ new faces that replace that
+			if len(f.vertices) < 3:
+				print("ERROR: This object has a face with " + str(len(f.vertices)) + " vertices! That's too few to be valid!")
+				# for now just add the previous face to the list of faces? it'll be bad but idk what else to do
+				new_faces += [f]
+				continue
+			# it has at least 3 vertices so we should create the half-way vertices!
+			new_vertex_indices = []
+			new_vertex_uvs = []
+			for i in range(len(f.vertices)):
+				# add a vertex between the two!
+				v1_i = f.vertices[i]
+				v2_i = f.vertices[(i+1)%len(f.vertices)]
+				key = (v1_i, v2_i)
+				if key in new_vertex_dict:
+					new_vertex_indices.append(new_vertex_dict[key])
+				else:
+					# create the new vertex!
+					v_index = len(self.vertices) # the index is the last item in the list!
+					new_vertex_indices.append(v_index)
+					v_pos = self.vertices[v1_i-1].lerp_towards(self.vertices[v2_i-1], .5) # halfway between!
+					self.vertices.append(v_pos)
+					new_vertex_dict[key] = v_index
+					# also add the flipped key so that it doesn't matter what order we check
+					new_vertex_dict[(v2_i, v1_i)] = v_index
+				# calculate and add the UV for it! we need to calculate this new for each face since they can have
+				# wildly different UVs
+				new_vertex_uvs.append(self.uvs[i].lerp_towards(self.uvs[(i+1)%len(self.uvs)], .5)) # halfway between
+			# now add the original vertices to this list so we know what we're working on
+			new_vertex_indices = f.vertices + new_vertex_indices
+			new_vertex_uvs = f.uvs + new_vertex_uvs
+			new_face_designs = [] # currently I'm assuming faces are in clockwise order. Is that right? who knows.
+			# I may need to flip that if all the normals are inverted
+			if len(f.vertices) == 3:
+				# then it's a tri!
+				# tris don't need to add any center vertices
+				new_face_designs = [[0, 3, 5], [1, 4, 3], [2, 5, 4], [3, 4, 5]]
+			elif len(f.vertices) == 4:
+				# it's a quad!
+				# We need a new vertex in the center of the face! For now we'll do average position? That works decentlyish...
+				# perhaps instead of average positions there's some better method but for now no clue.
+				# doesn't work well for kites but I can accept that.
+				avg_pos = sum_list_of_simpleVectors([self.vertices[x] for x in f.verticecs])
+				avg_pos /= max(len(f.vertices), 1) # can't divide by zero!
+				avg_uv = sum_list_of_simpleVectors(f.uvs)
+				avg_uv /= max(len(f.uvs), 1) # can't divide by zero!
+				new_vertex_indices.append(len(self.vertices))
+				self.vertices.append(avg_pos) # add the actual vertex pos
+				new_vertex_uvs.append(avg_uv) # add the uv coordinate
+				new_face_designs = [[0, 4, 8, 7], [1, 5, 8, 4], [2, 6, 8, 5], [3, 7, 8, 6]]
+			else:
+				# it's a pentagon/hexagon/octagon/ngon. For now divide it into tris!
+				# create the center point
+				avg_pos = sum_list_of_simpleVectors([self.vertices[x] for x in f.verticecs])
+				avg_pos /= max(len(f.vertices), 1) # can't divide by zero!
+				avg_uv = sum_list_of_simpleVectors(f.uvs)
+				avg_uv /= max(len(f.uvs), 1) # can't divide by zero!
+				center_vert_index = len(self.vertices)
+				new_vertex_indices.append(center_vert_index)
+				self.vertices.append(avg_pos) # add the actual vertex pos
+				new_vertex_uvs.append(avg_uv) # add the uv coordinate
+				# now figure out the faces! Each face needs to connect with the center, and there are a bunch of new tris.
+				# oh dear. It should be something like i connects to i+len(self.vertices) and the center point?
+				# then make the second half of that triangle by connection i+len(self.vertices) to i+1 to center point
+				for i in range(len(f.vertices)):
+					new_face_designs.append([i, i+len(self.vertices), center_vert_index])
+					new_face_designs.append([i+len(self.vertices), (i+1)%len(self.vertices), center_vert_index])
+
+			# create the faces for that design!
+			# PicoFace(obj, vertices, uvs, color, doublesided, notshaded, priority, nottextured)
+			# make sure to copy the UVs for each new face so they aren't linking to the same object
+			for i in range(len(new_face_designs)):
+				new_verts = [new_vertex_indices[x] for x in new_face_designs[i]]
+				new_uvs = [new_vertex_uvs[x] for x in new_face_designs[i]]
+				new_face = PicoFace(self, new_verts, new_uvs, f.color, f.doublesided, f.notshaded, f.priority, f.nottextured)
+				new_face.dirty = True
+				new_faces.append(new_face)
+				# print("Actually implement the code to create the new faces!")
+			# print("ERROR NOT IMPLEMENTED! GOTTA COME HERE AND CONTINUE WORK")
+			# previously working on: implementing the triangulation of n-gons
+			# creating the faces for each design, and adding those faces to the new faces list!
+		# swap out the faces for the new ones!
+		self.faces = new_faces
+		self.dirty = True
+
+	def triangulate_ngons(self, num_sides_filter=-1):
+		# trianglate ngons with the number of sides equal to num_sides_filter!
+		# it won't work on faces that are tris or smaller (obviously) but should work on larger ones!
+		if num_sides_filter <= 3:
+			print("Error: Can't triangulate tris or smaller")
+			return 0
+		faces_to_change = []
+		for i in range(len(self.faces)):
+			num_sides = len(self.faces[i].vertices)
+			if num_sides == num_sides_filter or (num_sides_filter == -1 and num_sides > 3):
+				faces_to_change.append(self.faces[i])
+		# now we have the list of faces to triangulate!
+		# currently we triangulate faces by creating an average vertex in the middle and then connecting all the outer
+		# vertices to that center vertex. It doesn't work on very concave shapes but it's a solid simple triangulation
+		# it also won't work well on twisted faces since it doesn't know how to unfold them.
+		new_faces = []
+		for f in faces_to_change:
+			# create the new center vert
+			avg_pos = sum_list_of_simpleVectors([self.vertices[x] for x in f.verticecs])
+			avg_pos /= max(len(f.vertices), 1) # can't divide by zero!
+			avg_uv = sum_list_of_simpleVectors(f.uvs)
+			avg_uv /= max(len(f.uvs), 1) # can't divide by zero!
+			center_vert_index = len(self.vertices)
+			self.vertices.append(avg_pos) # add the actual vertex pos to the list of verts in this object
+			# now create the faces!
+			for i in range(len(f.vertices)):
+				# create a new triangular face from the edge to the center point!
+				v1 = f.vertices[i]
+				v2 = f.vertices[(i+1)%len(f.vertices)]
+				new_verts = [v1, v2, center_vert_index]
+				new_uvs = [f.uvs[i], f.uvs[(i+1)%len(f.uvs)], avg_uv]
+				new_face = PicoFace(self, new_verts, new_uvs, f.color, f.doublesided, f.notshaded, f.priority, f.nottextured)
+
+		# now add the new faces and remove the old ones!
+		for f in faces_to_change:
+			self.faces.remove(f)
+		self.faces += new_faces
+		print("Triangulated " + str(len(faces_to_change)) + " faces")
+		return len(faces_to_change)
 
 	def remove_invalid_faces(self):
 		# loop over the faces and figure out if we should remove some because they have two or fewer unique vertices!
@@ -703,14 +838,28 @@ class PicoObject:
 		return self.name + ' ' + str(self.pos)
 
 class PicoSave:
-	def __init__(self, filepath, original_text, objects):
+	def __init__(self, filepath_or_picoSave, original_text, objects):
+		if type(filepath_or_picoSave) == PicoSave:
+			# then make a copy of that one!
+			# This is a little ugly but it works I guess
+			o = filepath_or_picoSave # just so it's easier to type...
+			self.original_text = o.original_text
+			self.objects = [obj.copy() for obj in o.objects]
+			self.header = o.header
+			self.parse_header(self.header) # parse it again for funsies?
+			self.footer = o.footer
+			self.dirty = True
+			self.original_path = o.original_path
 		self.original_text = original_text
 		self.objects = objects
 		self.header = original_text.split("\n")[0] # the first line!
 		self.parse_header(self.header)
 		self.footer = "%" + original_text.split("%")[1]
 		self.dirty = False
-		self.original_path = filepath
+		self.original_path = filepath_or_picoSave
+
+	def copy(self):
+		return PicoSave(self, None, None)
 
 	def parse_header(self, header):
 		# identifier;filename;zoomlevel;bgcolor;alphacolor
@@ -727,6 +876,16 @@ class PicoSave:
 			self.zoomlevel = int(self.zoomlevel)
 		except:
 			print("Error parsing header values! Left values as strings")
+
+	def estimate_file_size_percent(self):
+		# estimate how full this save file is!
+		# Currently we're estimating by outputing save text, stripping off the footer, and counting that size!
+		# It's rather expensive to do this!
+		file_text = self.output_save_text(self.original_path) # this is incorrect but it works
+		file_text_without_texture = file_text[:file_text.find("%")]
+		# it's probably ascii so it's probably a byte per character?
+		# currently we're saying that the max size is 17kb
+		return len(file_text_without_texture), len(file_text)
 
 	def output_save_text(self, save_file_name):
 		header = self.header.split(";")
@@ -1043,6 +1202,13 @@ class SimpleVector:
 
 	def __neg__(self):
 		return SimpleVector(-self.x, -self.y, -self.z)
+
+	def lerp_towards(self, other, percent):
+		# lerp towards the other item by that much, 0-1! (technically negatives and larger values work too)
+		# currently this creates like 3 new instances of a vector and perhaps should be cleaned up... it's not like this
+		# really needs performance though...
+		delta = other - self
+		return self + (delta * percent)
 
 	def component_multiplication(self, vector):
 		# can only multiply by a vector, multiply x by x, y by y, z by z
