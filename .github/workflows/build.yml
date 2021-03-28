@@ -18,7 +18,6 @@ jobs:
     steps:
     - name: Find Existing Release
       id: find_release
-      continue-on-error: true
       # check if the release exists!
       # fail if it didn't exist!
       uses: bruceadams/get-release@v1.2.2
