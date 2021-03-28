@@ -70,6 +70,13 @@ and all the other views will follow suit.
 You can also use the - and = keys and the scroll wheel to zoom in and out.
 
 
+### How to use the Stats Page:
+
+This is a very simple page! It simply shows off estimated file size, estimated
+percent full (picoCAD can only handle a certain file size! It's estimated to be
+about 17kb of mesh data ignoring the size of the texture). It also shows how
+many objects/vertices and faces are in the selected object (or all the objects).
+
 ### How to use the UV Menu:
 
 The UV Menu is divided into four tabs for UV Unwrapping, UV Layout editing, face

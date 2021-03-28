@@ -877,7 +877,7 @@ class PicoSave:
 		except:
 			print("Error parsing header values! Left values as strings")
 
-	def estimate_file_size_percent(self):
+	def estimate_file_size(self):
 		# estimate how full this save file is!
 		# Currently we're estimating by outputing save text, stripping off the footer, and counting that size!
 		# It's rather expensive to do this!

@@ -31,9 +31,6 @@ Here are some items that we're interested in adding to the toolkit! If you have 
 - - [ ] Rotate face normals (physically, not by swapping the vertices)
 	- needs face selection though... hmmmm.
 - - [ ] Consider changing around the output_save_text function of a picoSave to use the parsed header functions not the original text
-- - [ ] Stats page to show how many vertices, faces, objects, etc there are in your model!
-	- apparently the max file size is around 27kb, so an approximate "percentage full" meter would be useful!
-	- it may actually be 17kb of mesh data = full, ignoring the texture data, not quite sure!
 
 
 # Changelogs:
@@ -112,6 +109,10 @@ colors
 
 - Turns out the implementation of merging vertices forgot to actually delete the now unused vertices
 - This version fixed that, and added a button to manually delete unused vertices in case you wanted to clean up files that were previously merged and never got their vertices deleted
+
+## v0.5: The Subdivision Update
+
+- Added a stats page that shows estimated file size, estimated percentage full, and number of objects/vertices/faces
 
 
 # Thanks:

@@ -213,7 +213,25 @@ class BigImagePage(Page):
 		self.axescanvas.itemconfig(self.canvas_image_id, image=self.pico_axes_image)
 		self.axescanvas.coords(self.canvas_image_id, x, y)
 
+class LabeledTKValue(tk.Frame):
+	def __init__(self, master, start_string, string_var, end_string):
+		# basically this is just a label to do things like "file size: 17000 kb" nicely
+		self.master = master
+		tk.Frame.__init__(self, master)
+		# now initialize this!
 
+		self.left_text = tk.Label(self, text=start_string)
+		self.updating_text = tk.Label(self, textvariable = string_var)
+		self.right_text = tk.Label(self, text=end_string)
+		# label = tk.Label(self.scale_factor_frame, text="X:")
+		# label.pack(side="left")
+		self.left_text.pack(side="left")
+		# label = tk.Label(self.scale_factor_frame, text="Y:")
+		# label.pack(side="left")
+		self.updating_text.pack(side="left")
+		# label = tk.Label(self.scale_factor_frame, text="Z:")
+		# label.pack(side="left")
+		self.right_text.pack(side="left")
 
 class MeshDisplayCanvas(tk.Canvas):
 	def __init__(self, master, picoToolData, *args, **kwargs):
@@ -821,6 +839,129 @@ class DebugToolsPage(Page):
 			# print(windows)
 			if len(windows) == 1:
 				open_file_in_picoCAD_window(windows[0], self.picoToolData.picoSave.original_path)
+
+class StatsPage(Page):
+	def __init__(self, master, mainView, picoToolData):
+		self.mainView = mainView
+		self.picoToolData = picoToolData
+		self.picoToolData.add_picoSave_listener(lambda x: self.calculate_stats())
+		Page.__init__(self, master)
+		self.page_name = "Stats"
+		label = tk.Label(self, text="Project Statistics:")
+		label.pack(side="top", fill="both", expand=False)
+
+		# self.mark_dirty_button = tk.Button(self, text = "Refresh Stats", command = self.calculate_stats)
+		# self.mark_dirty_button.pack() # we're currently updating the stats whenever we view the page!
+
+		# now display the stats!
+		self.raw_filesize_string = tk.StringVar()
+		raw_filesize_label = LabeledTKValue(self, "Estimated Total Filesize: ", self.raw_filesize_string, " bytes")
+		raw_filesize_label.pack()
+		self.filesize_string = tk.StringVar()
+		filesize_label = LabeledTKValue(self, "Estimated Filesize: ", self.filesize_string, " bytes")
+		filesize_label.pack()
+		self.percent_estimate_string = tk.StringVar()
+		percent_estimate = LabeledTKValue(self, "Estimated: ", self.percent_estimate_string, "% of 17kb max size")
+		percent_estimate.pack()
+
+		# this shows how many objects are in the save. It's not useful to show off how many are selected since that's just "1"
+		self.objects_string = tk.StringVar()
+		labeled_object = LabeledTKValue(self, "Objects: ", self.objects_string, "")
+		labeled_object.pack()
+
+		# I guess we stick in an object selector here too so that we get to stats for specific objects? Hmm
+		# first things first select the mesh!
+		label = tk.Label(self, text="Select Mesh to View Stats:")
+		label.pack(side="top", fill="both", expand=False)
+		# then create the dropdown menu! It'll be synced between this and the UV editing page!
+		self.mesh_to_unwrap_entry = IntegerOutputOptionMenu(self, [("All Meshes", -1), ("1: This is a test", 1), ("2: if you see this please tell Jordan", 2)])
+		self.mesh_to_unwrap_entry.pack()
+		if self.picoToolData.picoSave != None:
+			self.mesh_to_unwrap_entry.build_choices_from_picoSave(self.picoToolData.picoSave)
+		self.mesh_to_unwrap_entry.add_listener(self.picoToolData.set_selected_mesh)
+		self.mesh_to_unwrap_entry.add_listener(lambda x: self.calculate_stats()) # also update the stats here!
+		self.picoToolData.add_picoSave_listener(self.mesh_to_unwrap_entry.build_choices_from_picoSave)
+		self.picoToolData.add_selected_mesh_listener(self.mesh_to_unwrap_entry.set_selection_index)
+		# so that when the mesh is updated this will be updated too!
+
+		# now we display the stats for the meshes!
+		self.vertices_string = tk.StringVar()
+		labeled_object = LabeledTKValue(self, "Vertices: ", self.vertices_string, "")
+		labeled_object.pack()
+		self.faces_string = tk.StringVar()
+		labeled_object = LabeledTKValue(self, "Total Faces: ", self.faces_string, "")
+		labeled_object.pack()
+		self.tris_string = tk.StringVar()
+		labeled_object = LabeledTKValue(self, "Tris: ", self.tris_string, "")
+		labeled_object.pack()
+		self.quads_string = tk.StringVar()
+		labeled_object = LabeledTKValue(self, "Quads: ", self.quads_string, "")
+		labeled_object.pack()
+		self.pentagon_string = tk.StringVar()
+		labeled_object = LabeledTKValue(self, "Pentagons: ", self.pentagon_string, "")
+		labeled_object.pack()
+		self.hexagon_string = tk.StringVar()
+		labeled_object = LabeledTKValue(self, "Hexagons: ", self.hexagon_string, "")
+		labeled_object.pack()
+		self.octagon_string = tk.StringVar()
+		labeled_object = LabeledTKValue(self, "Octagons: ", self.octagon_string, "")
+		labeled_object.pack()
+		self.odd_face_sizes = tk.StringVar()
+		labeled_object = tk.Label(self, textvariable=self.odd_face_sizes)
+		labeled_object.pack()
+
+		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		self.quitButton.pack()
+		self.master = master
+
+	def return_to_tools_page(self):
+		self.show_page(self.mainView.tool_page)
+
+	def show(self):
+		Page.show(self)
+		self.calculate_stats()
+
+	def calculate_stats(self):
+		if self.picoToolData.picoSave == None:
+			return # can't estimate if there's no save!
+		without_texture, raw = self.picoToolData.picoSave.estimate_file_size()
+		self.raw_filesize_string.set(raw)
+		self.filesize_string.set(without_texture)
+		# Currently we're estimating that it's 17kb ignoring textures.
+		self.percent_estimate_string.set(str(without_texture / 17000.0*100))
+
+		self.objects_string.set(len(self.picoToolData.picoSave.objects))
+
+		verts = 0
+		face_sizes = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+		# calculate number of faces!
+		for obj in self.picoToolData.get_selected_mesh_objects():
+			verts += len(obj.vertices)
+			for f in obj.faces:
+				while len(f.vertices) >= len(face_sizes):
+					# grow the face sizes array so we can track how many n-gons are in the mesh!
+					face_sizes.append(0)
+				face_sizes[len(f.vertices)] += 1
+		self.vertices_string.set(verts)
+		self.faces_string.set(sum(face_sizes))
+		# set the usual face sizes!
+		self.tris_string.set(face_sizes[3])
+		self.quads_string.set(face_sizes[4])
+		self.pentagon_string.set(face_sizes[5])
+		self.hexagon_string.set(face_sizes[6])
+		self.octagon_string.set(face_sizes[8])
+		# now display if there are any other odd face sizes!
+		odd_string = "Odd Faces:"
+		for i in range(len(face_sizes)):
+			# if it's not one of the classic face sizes add it to the string display
+			if i == 3 or i == 4 or i == 5 or i == 6 or i == 8:
+				continue
+			if face_sizes[i] == 0:
+				continue # don't display it if it doesn't have any of them!
+			odd_string += str(i) + ":" + str(face_sizes[i]) + ","
+		odd_string = odd_string[:-1] # exclude the last comma!
+		self.odd_face_sizes.set(odd_string)
+
 
 class FileEditingMaster(Page):
 	def __init__(self, master, mainView, picoToolData):
@@ -2434,6 +2575,9 @@ class MainToolPage(Page):
 		# now make buttons and whatever!
 
 
+		self.uv_menu_button = tk.Button(self, text = "Open Stats Page", command = self.open_stats_page)
+		self.uv_menu_button.pack()
+
 		self.uv_menu_button = tk.Button(self, text = "Open UV Menu", command = self.open_uv_master_menu)
 		self.uv_menu_button.pack()
 
@@ -2481,6 +2625,9 @@ class MainToolPage(Page):
 				open_file_in_picoCAD_window(windows[0], self.picoToolData.picoSave.original_path)
 				return
 		self.openInPicoCadText.set("Open In picoCAD (failed to find picoCAD window)")
+
+	def open_stats_page(self):
+		self.show_page(self.mainView.stats_page)
 
 	def open_debug_menu(self):
 		self.show_page(self.mainView.debug_page)
@@ -2608,6 +2755,7 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 		self.tool_page = MainToolPage(master, self, picoToolData)
 		self.image_color_editing_page = ImageColorEditingPage(master, self, picoToolData)
 		self.debug_page = DebugToolsPage(master, self, picoToolData)
+		self.stats_page = StatsPage(master, self, picoToolData)
 		# self.uv_page = UVToolsPage(master, self, picoToolData)
 		# self.uv_unwrapping_page = UVUnwrappingPage(master, self, picoToolData)
 		self.uv_master_page = UVMasterPage(master, self, picoToolData)
@@ -2616,7 +2764,9 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 		self.big_image_page = BigImagePage(master, self, picoToolData)
 
 		# self.uv_page, self.uv_unwrapping_page
-		self.pages = [self.main_page, self.tool_page, self.debug_page, self.uv_master_page, self.mesh_editing_page, self.file_editing_page, self.big_image_page] # need to put all the pages in this list so they initialize properly!
+		self.pages = [self.main_page, self.tool_page, self.stats_page, self.debug_page, self.uv_master_page,
+					self.mesh_editing_page, self.file_editing_page, self.big_image_page]
+					# need to put all the pages in this list so they initialize properly!
 
 		buttonframe = tk.Frame(self)
 		#buttonframe.pack(side="top", fill="x", expand=False)
