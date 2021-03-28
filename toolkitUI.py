@@ -1117,6 +1117,7 @@ class MeshEditingMaster(Page):
 		self.general_mesh_editing_frame = tk.Frame(mesh_editing_tabs)
 		# self.general_mesh_editing_frame.pack() # don't pack it because it's a tab now!
 		self.origins_editing_tab = tk.Frame(mesh_editing_tabs)
+		self.subdivision_frame = tk.Frame(mesh_editing_tabs)
 
 		# General Tab
 		tab1 = self.general_mesh_editing_frame
@@ -1124,6 +1125,9 @@ class MeshEditingMaster(Page):
 		# Merging Tab
 		tab2 = self.merging_frame
 		mesh_editing_tabs.add(tab2, text="Merging")
+		# Subdivision Tab
+		tab4 = self.subdivision_frame
+		mesh_editing_tabs.add(tab4, text="Subdivision")
 		# Origins Tab
 		tab3 = self.origins_editing_tab
 		mesh_editing_tabs.add(tab3, text="Origins Editing")
@@ -1131,6 +1135,8 @@ class MeshEditingMaster(Page):
 		mesh_editing_tabs.select(tab1)
 		mesh_editing_tabs.enable_traversal()
 
+
+		self.create_subdivision_tab(self.subdivision_frame)
 
 
 		# merging tools:
@@ -1315,6 +1321,58 @@ class MeshEditingMaster(Page):
 
 		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
+
+	def create_subdivision_tab(self, frame):
+		# create the buttons etc. needed to subdivide the selected objects!
+		# currently we have Triangulate meshes (and you can select which faces to limit it to!)
+		# as well as the simple subdivide into 2s
+		label = tk.Label(frame, text="Triangulate faces with this many vertices (-1 triangulates all):")
+		label.pack()
+		self.triangulate_selection = FloatEntry(frame, -1)
+		self.triangulate_selection.allow_negative = False
+		self.triangulate_selection.only_ints = True
+		self.triangulate_selection.pack()
+		self.triangulate_button = tk.Button(frame, text = "Triangulate Faces", command = self.triangulate_faces)
+		self.triangulate_button.pack()
+		self.simple_subdivision_button = tk.Button(frame, text = "Simple Subdivision", command = self.subdivide_into_fours)
+		self.simple_subdivision_button.pack()
+
+	def check_if_sure(self, title, content):
+		# launch a tk.message window to check if the user is sure
+		msg_box = tk.messagebox.askquestion(
+			title,
+			content,
+			icon='warning'
+		)
+		return msg_box == 'yes'
+
+	def triangulate_faces(self):
+		# triangulate the faces of the selected type!
+		# -1 is allowed, or > 3
+		if not self.check_if_sure("Are You Sure?",
+			"Triangulation adds faces which may make your file too large to open in picoCAD. Please make a backup first!"):
+			return # they aren't sure!
+		num_verts = int(self.triangulate_selection.float_value)
+		if num_verts != -1 and num_verts <= 3:
+			print("Can't triangulate faces with 3 or fewer vertices. Enter -1 to subdivide all faces")
+			return
+		objs = self.picoToolData.get_selected_mesh_objects()
+		changed = 0
+		for o in objs:
+			changed += o.triangulate_ngons(num_verts)
+		print("Triangulated " + str(changed) + " faces")
+		self.picoToolData.notify_update_render_listeners()
+
+	def subdivide_into_fours(self):
+		# subdivide the selected objects! it's "into fours" because it turns quads and tris into 4 smaller ones
+		if not self.check_if_sure("Are You Sure?",
+			"Subdivision adds lots of faces which may make your file too large to open in picoCAD. Please make a backup first!"):
+			return # they aren't sure!
+		objs = self.picoToolData.get_selected_mesh_objects()
+		for o in objs:
+			o.subdivide_into_fours()
+		print("Subdivided selected objects")
+		self.picoToolData.notify_update_render_listeners()
 
 	def view_fullscreen_axes_image(self, e):
 		self.show_page(self.mainView.big_image_page)

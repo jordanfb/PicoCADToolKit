@@ -113,7 +113,7 @@ colors
 ## v0.5: The Subdivision Update
 
 - Added a stats page that shows estimated file size, estimated percentage full, and number of objects/vertices/faces
-
+- Added a triangulation/subdivision page that lets you subdivide objects while maintaining uv coordinates!
 
 # Thanks:
 

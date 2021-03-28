@@ -23,7 +23,7 @@ using the toolkit.
 2) Launch PicoToolkit.exe from this folder
 3) Click "Open File" and navigate to your saved pico toolkit file and open it
 4) (Optional) CLICK "SAVE BACKUP FILE". It'll save a copy of your file with
-_backup and possibly a number appended to the name
+`_backup` and possibly a number appended to the name
 5) Click "Start Editing"! You'll be taken to a main page listing all the types of
 things you can do with the tool!
 6) At the top of the menu are lists of other menus and tools, on the bottom are
@@ -241,7 +241,7 @@ If you are moving vertices around with scaling or other tools you may find that 
 on the snapping points in picoCAD! If you want them to be, click this button and it will round each vertex
 position to the nearest .25 unit in every dimension.
 
-6) "Duplicate Mesh" will duplicate the currently selected mesh and append _dup to the name of the copy!
+6) "Duplicate Mesh" will duplicate the currently selected mesh and append `_dup` to the name of the copy!
 
 7) "Delete Mesh" will delete the currently selected mesh from the file! This can't be undone so make a backup!
 
@@ -272,6 +272,82 @@ that are within the maximum distance from each other!
 4) There's also a button to "Remove Unused Vertices." The latest versions of the toolkit correctly remove
 the newly useless vertices after merging vertices but earlier version didn't. Use this button to clean up
 any files that were merged previously to version v0.4.1.
+
+#### Subdivision:
+If you want to triangulate or subdivide a mesh then this is the menu for you! This can be very useful if your
+textures are warping because your faces are large!
+All the options on this menu add many new faces to your selected meshes, so make sure you only apply them
+to the minimum number of meshes necessary and that you make a backup before you apply them!
+Most of these options won't work very well on strange shapes (i.e. any object with a concave face or concave
+UV). That said you can always edit it manually afterwards.
+All of these options will do their best to keep the textures accurate by setting the UVs of any new vertices
+to be the average of the vertices surrounding it on the face.
+
+1) The first option is Triangulation. Triangulation divides faces that have more than 3 vertices into triangles!
+This tool implements triangulation in a very simple way, it simply adds a new vertex at the average position of
+all the vertices with a UV coordinate set to the average of the UV coordinates of all the vertices, and connects
+each edge to the center point to make a "spoked wheel" of triangles pointing inwards.
+If you only want to triangulate certain sized faces you can enter the number of vertices/edges to apply it to.
+For instance you could only triangulate quads (4 vertices), pentagons (5), hexagons (6), octagons (8) or some
+strange other ngon if you so desire.
+```
+   -----
+  /     \
+ /       \
+<         >
+ \       /
+  \     /
+   -----
+When triangulated this hexagon (and every shape with 4 or more sides) turns into a "spoked wheel" with a new edge
+connecting every original vertex to a new vertex in the center.
+   -----
+  /\ | /\
+ /  \|/  \
+<----+---->
+ \  /|\  /
+  \/ | \/
+   -----
+```
+2) Simple Subdivision. The next option is to subdivide the selected object. This option will add vertices in the
+middle of each edge and then connect them to make smaller shapes. It will subdivide triangles into four smaller
+triangles, quads into four smaller quads, and everything larger into a "spoked wheel" of triangles pointing in to
+the center point with two triangles splitting each original edge.
+
+If you're trying to reduce texture warp on hexagons/octagons it could be worth first triangulating the 6/8
+sided faces and then subdividing the entire object since this will separate the vertices across the face better.
+This adds double the faces for hexagons and more yet for octagons compared to simply subdividing so it also has
+a high performance impact!
+
+Here are examples that show how it subdivides faces. They will appear most accurate if you're using a
+monospace font (where each character is the same size).
+```
+   /\   
+  /  \  
+ /    \ 
+/      \
+--------
+The above triangle subdivides into:
+
+   /\
+  /__\
+ /\  /\
+/  \/  \
+--------
+
+-----
+|   |
+|   |
+|   |
+-----
+This quad subdivides into:
+-----
+| | |
+|-+-|
+| | |
+-----
+```
+Every larger face turns into a "spoked wheel" as shown in the triangulation example with extra vertices
+on the halfway point along each edge.
 
 
 #### Origins Editing:

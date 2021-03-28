@@ -593,7 +593,7 @@ class PicoObject:
 					new_vertex_indices.append(new_vertex_dict[key])
 				else:
 					# create the new vertex!
-					v_index = len(self.vertices) # the index is the last item in the list!
+					v_index = len(self.vertices)+1 # the index is the last item in the list!
 					new_vertex_indices.append(v_index)
 					v_pos = self.vertices[v1_i-1].lerp_towards(self.vertices[v2_i-1], .5) # halfway between!
 					self.vertices.append(v_pos)
@@ -602,7 +602,7 @@ class PicoObject:
 					new_vertex_dict[(v2_i, v1_i)] = v_index
 				# calculate and add the UV for it! we need to calculate this new for each face since they can have
 				# wildly different UVs
-				new_vertex_uvs.append(self.uvs[i].lerp_towards(self.uvs[(i+1)%len(self.uvs)], .5)) # halfway between
+				new_vertex_uvs.append(f.uvs[i].lerp_towards(f.uvs[(i+1)%len(f.uvs)], .5)) # halfway between
 			# now add the original vertices to this list so we know what we're working on
 			new_vertex_indices = f.vertices + new_vertex_indices
 			new_vertex_uvs = f.uvs + new_vertex_uvs
@@ -617,31 +617,31 @@ class PicoObject:
 				# We need a new vertex in the center of the face! For now we'll do average position? That works decentlyish...
 				# perhaps instead of average positions there's some better method but for now no clue.
 				# doesn't work well for kites but I can accept that.
-				avg_pos = sum_list_of_simpleVectors([self.vertices[x] for x in f.verticecs])
+				avg_pos = sum_list_of_simpleVectors([self.vertices[x-1] for x in f.vertices])
 				avg_pos /= max(len(f.vertices), 1) # can't divide by zero!
 				avg_uv = sum_list_of_simpleVectors(f.uvs)
 				avg_uv /= max(len(f.uvs), 1) # can't divide by zero!
-				new_vertex_indices.append(len(self.vertices))
+				new_vertex_indices.append(len(self.vertices)+1)
 				self.vertices.append(avg_pos) # add the actual vertex pos
 				new_vertex_uvs.append(avg_uv) # add the uv coordinate
 				new_face_designs = [[0, 4, 8, 7], [1, 5, 8, 4], [2, 6, 8, 5], [3, 7, 8, 6]]
 			else:
 				# it's a pentagon/hexagon/octagon/ngon. For now divide it into tris!
 				# create the center point
-				avg_pos = sum_list_of_simpleVectors([self.vertices[x] for x in f.verticecs])
+				avg_pos = sum_list_of_simpleVectors([self.vertices[x-1] for x in f.vertices])
 				avg_pos /= max(len(f.vertices), 1) # can't divide by zero!
 				avg_uv = sum_list_of_simpleVectors(f.uvs)
 				avg_uv /= max(len(f.uvs), 1) # can't divide by zero!
-				center_vert_index = len(self.vertices)
-				new_vertex_indices.append(center_vert_index)
+				center_vert_index = len(new_vertex_indices)
+				new_vertex_indices.append(len(self.vertices)+1)
 				self.vertices.append(avg_pos) # add the actual vertex pos
 				new_vertex_uvs.append(avg_uv) # add the uv coordinate
 				# now figure out the faces! Each face needs to connect with the center, and there are a bunch of new tris.
 				# oh dear. It should be something like i connects to i+len(self.vertices) and the center point?
 				# then make the second half of that triangle by connection i+len(self.vertices) to i+1 to center point
 				for i in range(len(f.vertices)):
-					new_face_designs.append([i, i+len(self.vertices), center_vert_index])
-					new_face_designs.append([i+len(self.vertices), (i+1)%len(self.vertices), center_vert_index])
+					new_face_designs.append([i, i+len(f.vertices), center_vert_index])
+					new_face_designs.append([i+len(f.vertices), (i+1)%len(f.vertices), center_vert_index])
 
 			# create the faces for that design!
 			# PicoFace(obj, vertices, uvs, color, doublesided, notshaded, priority, nottextured)
@@ -663,7 +663,7 @@ class PicoObject:
 	def triangulate_ngons(self, num_sides_filter=-1):
 		# trianglate ngons with the number of sides equal to num_sides_filter!
 		# it won't work on faces that are tris or smaller (obviously) but should work on larger ones!
-		if num_sides_filter <= 3:
+		if num_sides_filter <= 3 and num_sides_filter != -1:
 			print("Error: Can't triangulate tris or smaller")
 			return 0
 		faces_to_change = []
@@ -678,11 +678,11 @@ class PicoObject:
 		new_faces = []
 		for f in faces_to_change:
 			# create the new center vert
-			avg_pos = sum_list_of_simpleVectors([self.vertices[x] for x in f.verticecs])
+			avg_pos = sum_list_of_simpleVectors([self.vertices[x-1] for x in f.vertices])
 			avg_pos /= max(len(f.vertices), 1) # can't divide by zero!
 			avg_uv = sum_list_of_simpleVectors(f.uvs)
 			avg_uv /= max(len(f.uvs), 1) # can't divide by zero!
-			center_vert_index = len(self.vertices)
+			center_vert_index = len(self.vertices) + 1
 			self.vertices.append(avg_pos) # add the actual vertex pos to the list of verts in this object
 			# now create the faces!
 			for i in range(len(f.vertices)):
@@ -692,12 +692,15 @@ class PicoObject:
 				new_verts = [v1, v2, center_vert_index]
 				new_uvs = [f.uvs[i], f.uvs[(i+1)%len(f.uvs)], avg_uv]
 				new_face = PicoFace(self, new_verts, new_uvs, f.color, f.doublesided, f.notshaded, f.priority, f.nottextured)
+				new_face.dirty = True
+				new_faces.append(new_face)
 
 		# now add the new faces and remove the old ones!
 		for f in faces_to_change:
 			self.faces.remove(f)
 		self.faces += new_faces
-		print("Triangulated " + str(len(faces_to_change)) + " faces")
+		# print("Triangulated " + str(len(faces_to_change)) + " faces")
+		self.dirty = True
 		return len(faces_to_change)
 
 	def remove_invalid_faces(self):
