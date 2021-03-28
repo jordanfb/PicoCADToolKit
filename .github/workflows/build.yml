@@ -18,6 +18,7 @@ jobs:
     steps:
     - name: Find Existing Release
       id: find_release
+      continue-on-error: true
       # check if the release exists!
       # fail if it didn't exist!
       uses: bruceadams/get-release@v1.2.2
@@ -28,7 +29,7 @@ jobs:
       if: steps.find_release.outcome == 'success' || success()
       run: echo "${{ steps.find_release.outputs.upload_url }}" > release_url.txt
     - name: Create Release
-      if: failure() # only create a release if it failed to find one!
+      if: steps.find_release.outcome != 'success' || failure() # only create a release if it failed to find one!
       id: create_release
       uses: actions/create-release@v1
       env:
@@ -39,7 +40,7 @@ jobs:
         draft: false
         prerelease: false
     - name: Output Release URL File
-      if: steps.create_release.conclusion == 'success' || success()
+      if: steps.create_release.outcome == 'success' || success()
       run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
     - name: Save Release URL File for publish
       if: always() # always run because if it failed to find a release it'll make one!
