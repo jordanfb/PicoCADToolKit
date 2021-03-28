@@ -115,6 +115,7 @@ jobs:
     needs: createrelease
     runs-on: [ubuntu-latest]
     steps:
+    - uses: actions/checkout@v1
     - name: Load Release URL File from release job
       uses: actions/download-artifact@v1
       with:
