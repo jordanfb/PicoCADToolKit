@@ -3059,11 +3059,11 @@ if __name__ == "__main__":
 	main.pack(side="top", fill="both", expand=True)
 	root.protocol("WM_DELETE_WINDOW", lambda : quit_check_for_save(root, picoToolData))
 	root.wm_geometry("800x460")
-	if(len(sys.argv) == 2):
-		# then make it full screen I guess
-		# root.attributes('-zoomed', True)  # This just maximizes it so we can see the window. It's nothing to do with fullscreen.
-		root.attributes("-fullscreen", True)
-		# print("Launched in fullscreen")
+	# if(len(sys.argv) == 2):
+	# 	# then make it full screen I guess
+	# 	# root.attributes('-zoomed', True)  # This just maximizes it so we can see the window. It's nothing to do with fullscreen.
+	# 	root.attributes("-fullscreen", True)
+	# 	# print("Launched in fullscreen")
 	# else:
 	# 	print("Give an arbitrary argument to launch in fullscreen on the RPI")
 	root.mainloop()
