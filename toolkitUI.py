@@ -421,7 +421,7 @@ class ImageColorEditingPage(Page):
 
 		select_image_frame = tk.Frame(self.ui_frame)
 		select_image_frame.pack()
-		self.select_file_button = tk.Button(select_image_frame, text = "Select .png File", command = self.select_image_file)
+		self.select_file_button = make_button(select_image_frame, text = "Select .png File", command = self.select_image_file)
 		self.select_file_button.pack(side="left", anchor="w")
 
 		self.selected_filepath_string_var = tk.StringVar() # this will be set with the filepath!
@@ -433,8 +433,14 @@ class ImageColorEditingPage(Page):
 		self.color_buttons = []
 		self.color_settings = [] # [[total_weight, r_weight, g_weight, b_weight]]
 		for i in range(len(colors)):
-			button1 = tk.Button(self.color_button_frame, text=color_names[i], background = from_rgb(colors[i]), \
-				command = lambda i = i: self.select_color(i))
+			button1 = None
+			if sys.platform.startswith("darwin"):
+				button1 = ttk.Button(self.color_button_frame, text=color_names[i], \
+					command = lambda i = i: self.select_color(i))
+			else:
+				# windows/linux which work with tk buttons
+				button1 = tk.Button(self.color_button_frame, text=color_names[i], background = from_rgb(colors[i]), \
+					command = lambda i = i: self.select_color(i))
 			button1.grid(column = i % 4, row = math.floor(i / 4), sticky = "NESW")
 			self.color_buttons.append(button1)
 			self.color_settings.append([1,1,1,1])
@@ -495,7 +501,7 @@ class ImageColorEditingPage(Page):
 
 		self.show_output_file_intvar = tk.IntVar()
 		self.show_output_file_intvar.set(0) # set to zero because the image isn't built yet!
-		show_output_file = tk.Checkbutton(self.ui_frame, text = "Show Output Image", variable = self.show_output_file_intvar, onvalue = 1, offvalue = 0,\
+		show_output_file = make_checkbutton(self.ui_frame, text = "Show Output Image", variable = self.show_output_file_intvar, onvalue = 1, offvalue = 0,\
 				command = self.update_showing_output_file)
 		show_output_file.pack()
 
@@ -523,13 +529,13 @@ class ImageColorEditingPage(Page):
 		# self.update_converted_image() # for now do this? Hmmmmmm....
 		# should probably make a color wheel image as the test image...
 
-		self.update_image = tk.Button(self.ui_frame, text = "Update Output Image", command = self.update_converted_image)
+		self.update_image = make_button(self.ui_frame, text = "Update Output Image", command = self.update_converted_image)
 		self.update_image.pack()
 
-		self.update_image = tk.Button(self.ui_frame, text = "Convert and Save Input Image", command = self.convert_and_save_input)
+		self.update_image = make_button(self.ui_frame, text = "Convert and Save Input Image", command = self.convert_and_save_input)
 		self.update_image.pack()
 
-		self.quitButton = tk.Button(self.ui_frame, text = "Back", command = self.return_to_input_page)
+		self.quitButton = make_button(self.ui_frame, text = "Back", command = self.return_to_input_page)
 		self.quitButton.pack()
 
 		self.select_color(0)
@@ -739,10 +745,10 @@ class IntroPage(Page):
 		self.filepath_label = tk.Label(self, textvariable=self.filepath_string_var)
 		self.filepath_label.pack()
 
-		self.open_file_dialog = tk.Button(self, text = "Open File", command = self.choose_filename_dialog)
+		self.open_file_dialog = make_button(self, text = "Open File", command = self.choose_filename_dialog)
 		self.open_file_dialog.pack()
 
-		self.save_backup_button = tk.Button(self, text = "Save Backup File", command = self.save_backup_file)
+		self.save_backup_button = make_button(self, text = "Save Backup File", command = self.save_backup_file)
 		self.save_backup_button.pack()
 
 		# let the user know where the last backup was saved to
@@ -751,10 +757,10 @@ class IntroPage(Page):
 		label.pack(side="top", fill="both", expand=False)
 
 
-		self.loadFileButton = tk.Button(self, text = "Start Editing!", command = self.start_editing)
+		self.loadFileButton = make_button(self, text = "Start Editing!", command = self.start_editing)
 		self.loadFileButton.pack()
 
-		self.mesh_editing_button = tk.Button(self, text = "Open Image Color Palette Editing Menu", command = self.open_image_color_editing)
+		self.mesh_editing_button = make_button(self, text = "Open Image Color Palette Editing Menu", command = self.open_image_color_editing)
 		self.mesh_editing_button.pack()
 
 
@@ -763,7 +769,7 @@ class IntroPage(Page):
 		# label.pack(side="top", fill="both", expand=False)
 
 		
-		self.quitButton = tk.Button(self, text = "Quit", command = self.quit)
+		self.quitButton = make_button(self, text = "Quit", command = self.quit)
 		self.quitButton.pack()
 		self.master = master
 
@@ -815,14 +821,14 @@ class DebugToolsPage(Page):
 		label = tk.Label(self, text="Debug Options:")
 		label.pack(side="top", fill="both", expand=False)
 
-		self.mark_dirty_button = tk.Button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
+		self.mark_dirty_button = make_button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
 		self.mark_dirty_button.pack()
 
 		if windows_tools_enabled:
-			self.open_in_picoCAD = tk.Button(self, text = "Open File In picoCAD", command = self.test_open_in_picoCAD)
+			self.open_in_picoCAD = make_button(self, text = "Open File In picoCAD", command = self.test_open_in_picoCAD)
 			self.open_in_picoCAD.pack()
 
-		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 		self.master = master
 
@@ -850,7 +856,7 @@ class StatsPage(Page):
 		label = tk.Label(self, text="Project Statistics:")
 		label.pack(side="top", fill="both", expand=False)
 
-		# self.mark_dirty_button = tk.Button(self, text = "Refresh Stats", command = self.calculate_stats)
+		# self.mark_dirty_button = make_button(self, text = "Refresh Stats", command = self.calculate_stats)
 		# self.mark_dirty_button.pack() # we're currently updating the stats whenever we view the page!
 
 		# now display the stats!
@@ -910,7 +916,7 @@ class StatsPage(Page):
 		labeled_object = tk.Label(self, textvariable=self.odd_face_sizes)
 		labeled_object.pack()
 
-		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 		self.master = master
 
@@ -990,14 +996,14 @@ class FileEditingMaster(Page):
 		self.filepath_label = tk.Label(self, textvariable=self.filepath_string_var)
 		self.filepath_label.pack()
 
-		self.open_file_dialog = tk.Button(self, text = "Select File", command = self.choose_filename_dialog_to_copy_in)
+		self.open_file_dialog = make_button(self, text = "Select File", command = self.choose_filename_dialog_to_copy_in)
 		self.open_file_dialog.pack()
 
-		self.copy_file_button = tk.Button(self, text = "Copy File In", command = self.copy_file_in_with_check)
+		self.copy_file_button = make_button(self, text = "Copy File In", command = self.copy_file_in_with_check)
 		self.copy_file_button.pack()
 
 
-		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 
 	def choose_filename_dialog_to_copy_in(self):
@@ -1163,9 +1169,9 @@ class MeshEditingMaster(Page):
 			self.mesh_to_copy_from_dropdown.build_choices_from_picoSave_without_all(self.picoToolData.picoSave)
 		self.picoToolData.add_picoSave_listener(self.mesh_to_copy_from_dropdown.build_choices_from_picoSave_without_all)
 		# when the number of meshes changes or the file gets reloaded it'll recreate this list automatically!
-		self.copy_meshes_button = tk.Button(self.left_merging_frame, text="Copy Mesh into Selected Mesh", command=self.copy_mesh)
+		self.copy_meshes_button = make_button(self.left_merging_frame, text="Copy Mesh into Selected Mesh", command=self.copy_mesh)
 		self.copy_meshes_button.pack()
-		self.merge_meshes_button = tk.Button(self.left_merging_frame, text="Merge Mesh into Selected Mesh", command=self.merge_mesh)
+		self.merge_meshes_button = make_button(self.left_merging_frame, text="Merge Mesh into Selected Mesh", command=self.merge_mesh)
 		self.merge_meshes_button.pack()
 
 		label = tk.Label(self.right_merging_frame, text="Merge Vertices:")
@@ -1179,12 +1185,12 @@ class MeshEditingMaster(Page):
 		# Remove Hidden Faces
 		self.destroy_hidden_faces_value = tk.IntVar()
 		self.destroy_hidden_faces_value.set(0)
-		self.destroy_hidden_faces_checkbox = tk.Checkbutton(self.right_merging_frame, text = "Destroy Contained Faces", variable = self.destroy_hidden_faces_value, onvalue = 1, offvalue = 0)
+		self.destroy_hidden_faces_checkbox = make_checkbutton(self.right_merging_frame, text = "Destroy Contained Faces", variable = self.destroy_hidden_faces_value, onvalue = 1, offvalue = 0)
 		self.destroy_hidden_faces_checkbox.pack()
 		# now the button to actually do it!
-		self.merge_faces_button = tk.Button(self.right_merging_frame, text = "Merge Overlapping Vertices", command = self.merge_overlapping_verts)
+		self.merge_faces_button = make_button(self.right_merging_frame, text = "Merge Overlapping Vertices", command = self.merge_overlapping_verts)
 		self.merge_faces_button.pack()
-		self.remove_unused_vertices = tk.Button(self.right_merging_frame, text = "Remove Unused Vertices", command = self.remove_unused_vertices)
+		self.remove_unused_vertices = make_button(self.right_merging_frame, text = "Remove Unused Vertices", command = self.remove_unused_vertices)
 		self.remove_unused_vertices.pack()
 
 		# now enter the scale object tool!
@@ -1208,9 +1214,9 @@ class MeshEditingMaster(Page):
 
 		self.scale_buttons_frame = tk.Frame(self.general_mesh_editing_frame)
 		self.scale_buttons_frame.pack()
-		self.scale_mesh_button = tk.Button(self.scale_buttons_frame, text = "Scale Mesh", command = self.scale_mesh)
+		self.scale_mesh_button = make_button(self.scale_buttons_frame, text = "Scale Mesh", command = self.scale_mesh)
 		self.scale_mesh_button.pack(side="left", padx=(0,10))
-		self.scale_mesh_object_button = tk.Button(self.scale_buttons_frame, text = "Scale Object Position", command = self.scale_object_position)
+		self.scale_mesh_object_button = make_button(self.scale_buttons_frame, text = "Scale Object Position", command = self.scale_object_position)
 		self.scale_mesh_object_button.pack(side="right", padx=(10,0))
 
 		# now implement the mesh rotation!
@@ -1231,25 +1237,25 @@ class MeshEditingMaster(Page):
 		label = tk.Label(self.rotate_factor_frame, text="Z:")
 		label.pack(side="left")
 		self.z_rotate_entry.pack(side="left")
-		self.scale_mesh_button = tk.Button(self.general_mesh_editing_frame, text = "Rotate Vertices Around Mesh Origin", command = self.rotate_mesh)
+		self.scale_mesh_button = make_button(self.general_mesh_editing_frame, text = "Rotate Vertices Around Mesh Origin", command = self.rotate_mesh)
 		self.scale_mesh_button.pack()
 
 		label = tk.Label(self.general_mesh_editing_frame, text="") # just add some space here to separate the scaling from the rest
 		label.pack(side="top", fill="both", expand=False)
 
-		self.invert_normals_button = tk.Button(self.general_mesh_editing_frame, text = "Flip Mesh Normals", command = self.invert_normals)
+		self.invert_normals_button = make_button(self.general_mesh_editing_frame, text = "Flip Mesh Normals", command = self.invert_normals)
 		self.invert_normals_button.pack()
 
-		self.remove_invalid_faces_button = tk.Button(self.general_mesh_editing_frame, text = "Remove Faces with < 3 Unique Vertices", command = self.remove_invalid_faces)
+		self.remove_invalid_faces_button = make_button(self.general_mesh_editing_frame, text = "Remove Faces with < 3 Unique Vertices", command = self.remove_invalid_faces)
 		self.remove_invalid_faces_button.pack()
 
-		self.remove_invalid_faces_button = tk.Button(self.general_mesh_editing_frame, text = "Round Vertices to Nearest .25", command = self.round_vertices)
+		self.remove_invalid_faces_button = make_button(self.general_mesh_editing_frame, text = "Round Vertices to Nearest .25", command = self.round_vertices)
 		self.remove_invalid_faces_button.pack()
 
-		self.duplicate_mesh_button = tk.Button(self.general_mesh_editing_frame, text = "Duplicate mesh", command = self.duplicate_mesh)
+		self.duplicate_mesh_button = make_button(self.general_mesh_editing_frame, text = "Duplicate mesh", command = self.duplicate_mesh)
 		self.duplicate_mesh_button.pack()
 
-		self.delete_mesh_button = tk.Button(self.general_mesh_editing_frame, text = "Delete mesh", command = self.delete_mesh)
+		self.delete_mesh_button = make_button(self.general_mesh_editing_frame, text = "Delete mesh", command = self.delete_mesh)
 		self.delete_mesh_button.pack()
 
 		# make the origins editing tab!
@@ -1273,7 +1279,7 @@ class MeshEditingMaster(Page):
 		label = tk.Label(self.origin_adjustment_frame, text="Z:")
 		label.pack(side="left")
 		self.z_origin_entry.pack(side="left")
-		self.move_origin_manually_button = tk.Button(self.origins_editing_tab, text = "Adjust Origin", command = self.adjust_origin_manually)
+		self.move_origin_manually_button = make_button(self.origins_editing_tab, text = "Adjust Origin", command = self.adjust_origin_manually)
 		self.move_origin_manually_button.pack()
 
 
@@ -1300,7 +1306,7 @@ class MeshEditingMaster(Page):
 		self.bounding_box_y_option_entry.pack(side="left")
 		self.bounding_box_z_option_entry = IntegerOutputOptionMenu(self.bounding_box_selection_frame, self.bounding_box_z_options, 1)
 		self.bounding_box_z_option_entry.pack(side="left")
-		self.move_to_bounding_box_pos = tk.Button(self.origins_editing_tab, text = "Move To Point on World Bounding Box", command = self.move_to_world_bounding_box)
+		self.move_to_bounding_box_pos = make_button(self.origins_editing_tab, text = "Move To Point on World Bounding Box", command = self.move_to_world_bounding_box)
 		self.move_to_bounding_box_pos.pack()
 
 		# space it out
@@ -1308,18 +1314,18 @@ class MeshEditingMaster(Page):
 		label.pack()
 
 		# then the button to center it based on the average position!
-		self.move_to_average_position = tk.Button(self.origins_editing_tab, text = "Move Origin To Mesh's Average Vertex Position", command = self.move_origin_to_average_pos)
+		self.move_to_average_position = make_button(self.origins_editing_tab, text = "Move Origin To Mesh's Average Vertex Position", command = self.move_origin_to_average_pos)
 		self.move_to_average_position.pack()
 
-		self.move_origin_to_origin = tk.Button(self.origins_editing_tab, text = "Move Origin to <0,0,0> World Coordinates", command = self.move_origin_to_world_origin)
+		self.move_origin_to_origin = make_button(self.origins_editing_tab, text = "Move Origin to <0,0,0> World Coordinates", command = self.move_origin_to_world_origin)
 		self.move_origin_to_origin.pack()
 
 		# then the option to round it to the nearest .25
-		self.round_origin_pos = tk.Button(self.origins_editing_tab, text = "Round Origin To Nearest .25", command = self.round_origin_to_nearest_25)
+		self.round_origin_pos = make_button(self.origins_editing_tab, text = "Round Origin To Nearest .25", command = self.round_origin_to_nearest_25)
 		self.round_origin_pos.pack()
 
 
-		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 
 	def create_subdivision_tab(self, frame):
@@ -1332,9 +1338,9 @@ class MeshEditingMaster(Page):
 		self.triangulate_selection.allow_negative = False
 		self.triangulate_selection.only_ints = True
 		self.triangulate_selection.pack()
-		self.triangulate_button = tk.Button(frame, text = "Triangulate Faces", command = self.triangulate_faces)
+		self.triangulate_button = make_button(frame, text = "Triangulate Faces", command = self.triangulate_faces)
 		self.triangulate_button.pack()
-		self.simple_subdivision_button = tk.Button(frame, text = "Simple Subdivision", command = self.subdivide_into_fours)
+		self.simple_subdivision_button = make_button(frame, text = "Simple Subdivision", command = self.subdivide_into_fours)
 		self.simple_subdivision_button.pack()
 
 	def check_if_sure(self, title, content):
@@ -1593,7 +1599,7 @@ class UVMasterPage(Page):
 		# self.test_float_entry.add_listener(lambda f: print(f))
 		# self.test_float_entry.pack()
 
-		self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 
 	def return_to_tools_page(self):
@@ -1763,23 +1769,23 @@ class UVToolsPage(Page):
 		# label = tk.Label(self, text="UV Layout Page:")
 		# label.pack(side="top", fill="both", expand=False)
 
-		# self.mark_dirty_button = tk.Button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
+		# self.mark_dirty_button = make_button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
 		# self.mark_dirty_button.pack()
 
 		# now add the button to unwrap the normals as best I can! Probably should include a "scalar" button as well
 		# label = tk.Label(self, text="Unwrap:") # to space things out!
 		# label.pack(side="top", fill="both", expand=False)
 
-		# naive_unwrap = tk.Button(self, text = "Naive UV Unwrap Model", command = self.unwrap_model)
+		# naive_unwrap = make_button(self, text = "Naive UV Unwrap Model", command = self.unwrap_model)
 		# naive_unwrap.pack()
 
-		# swap_uvs = tk.Button(self, text = "Swap UVs", command = self.swap_uvs)
+		# swap_uvs = make_button(self, text = "Swap UVs", command = self.swap_uvs)
 		# swap_uvs.pack()
 
-		# round_uvs_to_quarter_unit = tk.Button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
+		# round_uvs_to_quarter_unit = make_button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
 		# round_uvs_to_quarter_unit.pack()
 
-		# uv_unwrapping_page_button = tk.Button(self, text = "To UV Unwrapping Menu", command = self.show_unwrapping_page)
+		# uv_unwrapping_page_button = make_button(self, text = "To UV Unwrapping Menu", command = self.show_unwrapping_page)
 		# uv_unwrapping_page_button.pack()
 
 		# label = tk.Label(self, text="") # to space things out!
@@ -1839,13 +1845,13 @@ class UVToolsPage(Page):
 				  value=0)
 		dontPack.pack()
 
-		naive_pack = tk.Button(self, text = "Pack Normals Naively", command = self.pack_naively)
+		naive_pack = make_button(self, text = "Pack Normals Naively", command = self.pack_naively)
 		naive_pack.pack()
 
-		largest_pack = tk.Button(self, text = "Pack Normals Tallest First", command = self.pack_largest_first)
+		largest_pack = make_button(self, text = "Pack Normals Tallest First", command = self.pack_largest_first)
 		largest_pack.pack()
 
-		self.show_uvs = tk.Button(self, text = "Show UVs", command = self.show_uv_map)
+		self.show_uvs = make_button(self, text = "Show UVs", command = self.show_uv_map)
 		self.show_uvs.pack()
 
 		# label = tk.Label(self, text="\nExport:") # to space things out!
@@ -1867,20 +1873,20 @@ class UVToolsPage(Page):
 
 		# self.uv_export_button_stringvar = tk.StringVar()
 		# self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
-		# self.export_uvs = tk.Button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
+		# self.export_uvs = make_button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
 		# self.export_uvs.pack()
 
 		# label = tk.Label(self, text="") # to space things out!
 		# label.pack(side="top", fill="both", expand=False)
 
 
-		# self.export_uvs = tk.Button(self, text = "Export Current Texture as PNG", command = self.export_texture)
+		# self.export_uvs = make_button(self, text = "Export Current Texture as PNG", command = self.export_texture)
 		# self.export_uvs.pack()
 
 		# label = tk.Label(self, text=" ") # to space things out!
 		# label.pack(side="top", fill="both", expand=False)
 
-		# self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		# self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		# self.quitButton.pack()
 
 	def set_uv_padding(self, f):
@@ -2030,46 +2036,46 @@ class FaceConversionFrame(tk.Frame):
 
 		frame = tk.Frame(self)
 		frame.pack()
-		button = tk.Button(frame, text = "Set \"Double-Sided\"", command = lambda: self.set_all_faces_doublesided(True))
+		button = make_button(frame, text = "Set \"Double-Sided\"", command = lambda: self.set_all_faces_doublesided(True))
 		button.pack(side="left")
-		button = tk.Button(frame, text = "Clear \"Double-Sided\"", command = lambda: self.set_all_faces_doublesided(False))
-		button.pack(side="left")
-
-		frame = tk.Frame(self)
-		frame.pack()
-		button = tk.Button(frame, text = "Set \"No Shading\"", command = lambda: self.set_all_faces_notshaded(True))
-		button.pack(side="left")
-		button = tk.Button(frame, text = "Clear \"No Shading\"", command = lambda: self.set_all_faces_notshaded(False))
+		button = make_button(frame, text = "Clear \"Double-Sided\"", command = lambda: self.set_all_faces_doublesided(False))
 		button.pack(side="left")
 
 		frame = tk.Frame(self)
 		frame.pack()
-		button = tk.Button(frame, text = "Set \"No Texture\"", command = lambda: self.set_all_faces_nottextured(True))
+		button = make_button(frame, text = "Set \"No Shading\"", command = lambda: self.set_all_faces_notshaded(True))
 		button.pack(side="left")
-		button = tk.Button(frame, text = "Clear \"No Texture\"", command = lambda: self.set_all_faces_nottextured(False))
+		button = make_button(frame, text = "Clear \"No Shading\"", command = lambda: self.set_all_faces_notshaded(False))
 		button.pack(side="left")
 
 		frame = tk.Frame(self)
 		frame.pack()
-		button = tk.Button(frame, text = "Set \"Render First\"", command = lambda: self.set_all_faces_priority(True))
+		button = make_button(frame, text = "Set \"No Texture\"", command = lambda: self.set_all_faces_nottextured(True))
 		button.pack(side="left")
-		button = tk.Button(frame, text = "Clear \"Render First\"", command = lambda: self.set_all_faces_priority(False))
+		button = make_button(frame, text = "Clear \"No Texture\"", command = lambda: self.set_all_faces_nottextured(False))
+		button.pack(side="left")
+
+		frame = tk.Frame(self)
+		frame.pack()
+		button = make_button(frame, text = "Set \"Render First\"", command = lambda: self.set_all_faces_priority(True))
+		button.pack(side="left")
+		button = make_button(frame, text = "Clear \"Render First\"", command = lambda: self.set_all_faces_priority(False))
 		button.pack(side="left")
 
 		# now comes the hard stuff! A few buttons for converting faces from no-texture to texture and one for editing the color!
 		# oh dear!
 		label = tk.Label(self, text="Tools to Convert Colored Faces Into Textured Faces:")
 		label.pack(side="top", fill="both", expand=False)
-		button = tk.Button(self, text = "Convert Colored Faces Into Textured Faces", command = self.find_texture_for_no_texture_faces)
+		button = make_button(self, text = "Convert Colored Faces Into Textured Faces", command = self.find_texture_for_no_texture_faces)
 		button.pack()
-		button = tk.Button(self, text = "Display Missing Colors", command = self.display_missing_colors)
+		button = make_button(self, text = "Display Missing Colors", command = self.display_missing_colors)
 		button.pack()
 
 		self.missing_colors_text_var = tk.StringVar()
 		label = tk.Label(self, textvariable=self.missing_colors_text_var)
 		label.pack(side="top", fill="both", expand=False)
 
-		button = tk.Button(self, text = "Add Missing Colors To End of Texture and Convert", command = self.add_missing_colors_with_confirmation)
+		button = make_button(self, text = "Add Missing Colors To End of Texture and Convert", command = self.add_missing_colors_with_confirmation)
 		button.pack()
 
 	def find_texture_for_no_texture_faces(self):
@@ -2195,7 +2201,7 @@ class UVExportPage(Page):
 		label = tk.Label(self, text="\nExport:") # to space things out!
 		label.pack(side="top", fill="both", expand=False)
 
-		self.uv_color_checkbox = tk.Checkbutton(self, text = "Color UVs with Face Color", variable = self.picoToolData.color_uv_setting,\
+		self.uv_color_checkbox = make_checkbutton(self, text = "Color UVs with Face Color", variable = self.picoToolData.color_uv_setting,\
 				onvalue = 1, offvalue = 0)
 		self.uv_color_checkbox.pack()
 
@@ -2224,23 +2230,23 @@ class UVExportPage(Page):
 
 		self.uv_export_button_stringvar = tk.StringVar()
 		self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
-		self.export_uvs = tk.Button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
+		self.export_uvs = make_button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
 		self.export_uvs.pack()
 
 		label = tk.Label(self, text="") # to space things out!
 		label.pack(side="top", fill="both", expand=False)
 
 
-		self.export_texture_button = tk.Button(self, text = "Export Current Texture as PNG", command = self.export_texture)
+		self.export_texture_button = make_button(self, text = "Export Current Texture as PNG", command = self.export_texture)
 		self.export_texture_button.pack()
 
-		self.export_alpha_button = tk.Button(self, text = "Export Current Alpha as PNG", command = self.export_alpha_map)
+		self.export_alpha_button = make_button(self, text = "Export Current Alpha as PNG", command = self.export_alpha_map)
 		self.export_alpha_button.pack()
 
 		label = tk.Label(self, text=" ") # to space things out!
 		label.pack(side="top", fill="both", expand=False)
 
-		# self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		# self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		# self.quitButton.pack()
 
 	def update_pack_buttons(self):
@@ -2410,23 +2416,23 @@ class UVUnwrappingPage(Page):
 
 
 
-		# self.mark_dirty_button = tk.Button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
+		# self.mark_dirty_button = make_button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
 		# self.mark_dirty_button.pack()
 
 		# now add the button to unwrap the normals as best I can! Probably should include a "scalar" button as well
 		# label = tk.Label(self, text="UV Unwrawpping Page:") # to space things out!
 		# label.pack(side="top", fill="both", expand=False)
 
-		# self.show_uvs = tk.Button(self, text = "To UV Layout Menu", command = self.show_uv_page)
+		# self.show_uvs = make_button(self, text = "To UV Layout Menu", command = self.show_uv_page)
 		# self.show_uvs.pack()
 
-		naive_unwrap = tk.Button(self, text = "Naive UV Unwrap Model", command = self.unwrap_model)
+		naive_unwrap = make_button(self, text = "Naive UV Unwrap Model", command = self.unwrap_model)
 		naive_unwrap.pack()
 
-		swap_uvs = tk.Button(self, text = "Swap All UVs", command = self.swap_uvs)
+		swap_uvs = make_button(self, text = "Swap All UVs", command = self.swap_uvs)
 		swap_uvs.pack()
 
-		round_uvs_to_quarter_unit = tk.Button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
+		round_uvs_to_quarter_unit = make_button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
 		round_uvs_to_quarter_unit.pack()
 
 		# # now add the button to space out the normals!
@@ -2434,10 +2440,10 @@ class UVUnwrappingPage(Page):
 		# label = tk.Label(self, text="Pack:") # to space things out!
 		# label.pack(side="top", fill="both", expand=False)
 
-		# naive_pack = tk.Button(self, text = "Pack Normals Naively", command = self.pack_naively)
+		# naive_pack = make_button(self, text = "Pack Normals Naively", command = self.pack_naively)
 		# naive_pack.pack()
 
-		# largest_pack = tk.Button(self, text = "Pack Normals Tallest First", command = self.pack_largest_first)
+		# largest_pack = make_button(self, text = "Pack Normals Tallest First", command = self.pack_largest_first)
 		# largest_pack.pack()
 
 		# label = tk.Label(self, text="UV Export Scale: (multiples of .125 below 1, or powers of 2):")
@@ -2456,23 +2462,23 @@ class UVUnwrappingPage(Page):
 
 		# self.uv_export_button_stringvar = tk.StringVar()
 		# self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
-		# self.export_uvs = tk.Button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
+		# self.export_uvs = make_button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
 		# self.export_uvs.pack()
 
-		self.show_uvs = tk.Button(self, text = "Show UVs", command = self.show_uv_map)
+		self.show_uvs = make_button(self, text = "Show UVs", command = self.show_uv_map)
 		self.show_uvs.pack()
 
 		# label = tk.Label(self, text="\nTextures:") # to space things out!
 		# label.pack(side="top", fill="both", expand=False)
 
 
-		# self.export_uvs = tk.Button(self, text = "Export Current Texture as PNG", command = self.export_texture)
+		# self.export_uvs = make_button(self, text = "Export Current Texture as PNG", command = self.export_texture)
 		# self.export_uvs.pack()
 
 		# label = tk.Label(self, text=" ") # to space things out!
 		# label.pack(side="top", fill="both", expand=False)
 
-		# self.quitButton = tk.Button(self, text = "Back", command = self.return_to_tools_page)
+		# self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		# self.quitButton.pack()
 
 	def validate_mesh_number(self, f):
@@ -2633,19 +2639,19 @@ class MainToolPage(Page):
 		# now make buttons and whatever!
 
 
-		self.uv_menu_button = tk.Button(self, text = "Open Stats Page", command = self.open_stats_page)
+		self.uv_menu_button = make_button(self, text = "Open Stats Page", command = self.open_stats_page)
 		self.uv_menu_button.pack()
 
-		self.uv_menu_button = tk.Button(self, text = "Open UV Menu", command = self.open_uv_master_menu)
+		self.uv_menu_button = make_button(self, text = "Open UV Menu", command = self.open_uv_master_menu)
 		self.uv_menu_button.pack()
 
-		self.mesh_editing_button = tk.Button(self, text = "Open Mesh Editing Menu", command = self.open_mesh_editing)
+		self.mesh_editing_button = make_button(self, text = "Open Mesh Editing Menu", command = self.open_mesh_editing)
 		self.mesh_editing_button.pack()
 
-		self.mesh_editing_button = tk.Button(self, text = "Open File Editing Menu", command = self.open_file_editing)
+		self.mesh_editing_button = make_button(self, text = "Open File Editing Menu", command = self.open_file_editing)
 		self.mesh_editing_button.pack()
 
-		self.debug_menu_button = tk.Button(self, text = "Open Debug Menu", command = self.open_debug_menu)
+		self.debug_menu_button = make_button(self, text = "Open Debug Menu", command = self.open_debug_menu)
 		self.debug_menu_button.pack()
 
 
@@ -2657,19 +2663,19 @@ class MainToolPage(Page):
 		if windows_tools_enabled:
 			self.openInPicoCadText = tk.StringVar();
 			self.openInPicoCadText.set("Open In picoCAD")
-			self.openInPicoCad = tk.Button(self, textvariable = self.openInPicoCadText, command = self.test_open_in_picoCAD)
+			self.openInPicoCad = make_button(self, textvariable = self.openInPicoCadText, command = self.test_open_in_picoCAD)
 			self.openInPicoCad.pack()
 
-		self.reloadFile = tk.Button(self, text = "Reload File", command = self.reload_file_check_if_saved)
+		self.reloadFile = make_button(self, text = "Reload File", command = self.reload_file_check_if_saved)
 		self.reloadFile.pack()
 
-		self.save_backup_button = tk.Button(self, text = "Save A Copy of the Open Data", command = self.save_backup_file)
+		self.save_backup_button = make_button(self, text = "Save A Copy of the Open Data", command = self.save_backup_file)
 		self.save_backup_button.pack()
 
-		self.saveChanges = tk.Button(self, text = "Save Changes (OVERWRITE FILE)", command = self.save_overwrite)
+		self.saveChanges = make_button(self, text = "Save Changes (OVERWRITE FILE)", command = self.save_overwrite)
 		self.saveChanges.pack()
 		
-		self.quitButton = tk.Button(self, text = "Exit", command = self.return_to_main_page_check_if_saved)
+		self.quitButton = make_button(self, text = "Exit", command = self.return_to_main_page_check_if_saved)
 		self.quitButton.pack()
 		self.master = master
 
@@ -2908,33 +2914,33 @@ class MainView(tk.Frame): # this is the thing that has every page inside it.
 		view_button_list = tk.Frame(container)
 		view_button_list.pack(side="bottom", fill="both", expand=True)
 
-		self.zoom_in_button = tk.Button(view_button_list, text = "+", command = lambda:self.mult_zoom(2))
+		self.zoom_in_button = make_button(view_button_list, text = "+", command = lambda:self.mult_zoom(2))
 		self.zoom_in_button.pack(side="right")
-		self.zoom_out_button = tk.Button(view_button_list, text = "-", command = lambda:self.mult_zoom(.5))
+		self.zoom_out_button = make_button(view_button_list, text = "-", command = lambda:self.mult_zoom(.5))
 		self.zoom_out_button.pack(side="right")
 
-		movement_buttons = tk.Button(view_button_list, text = ">", command = lambda:self.adjust_position(movement_speed, 0, 0))
+		movement_buttons = make_button(view_button_list, text = ">", command = lambda:self.adjust_position(movement_speed, 0, 0))
 		movement_buttons.pack(side="right")
-		movement_buttons = tk.Button(view_button_list, text = "<", command = lambda:self.adjust_position(-movement_speed, 0, 0))
+		movement_buttons = make_button(view_button_list, text = "<", command = lambda:self.adjust_position(-movement_speed, 0, 0))
 		movement_buttons.pack(side="right")
-		movement_buttons = tk.Button(view_button_list, text = "^", command = lambda:self.adjust_position(0, 0, movement_speed))
+		movement_buttons = make_button(view_button_list, text = "^", command = lambda:self.adjust_position(0, 0, movement_speed))
 		movement_buttons.pack(side="right")
-		movement_buttons = tk.Button(view_button_list, text = "v", command = lambda:self.adjust_position(0, 0, -movement_speed))
+		movement_buttons = make_button(view_button_list, text = "v", command = lambda:self.adjust_position(0, 0, -movement_speed))
 		movement_buttons.pack(side="right")
-		movement_buttons = tk.Button(view_button_list, text = "up", command = lambda:self.adjust_position(0, -movement_speed, 0))
+		movement_buttons = make_button(view_button_list, text = "up", command = lambda:self.adjust_position(0, -movement_speed, 0))
 		movement_buttons.pack(side="right")
-		movement_buttons = tk.Button(view_button_list, text = "down", command = lambda:self.adjust_position(0, movement_speed, 0))
+		movement_buttons = make_button(view_button_list, text = "down", command = lambda:self.adjust_position(0, movement_speed, 0))
 		movement_buttons.pack(side="right")
-		movement_buttons = tk.Button(view_button_list, text = "reset", command = lambda:self.reset_position())
+		movement_buttons = make_button(view_button_list, text = "reset", command = lambda:self.reset_position())
 		movement_buttons.pack(side="right")
 
 		view_button_list = tk.Frame(container)
 		view_button_list.pack(side="bottom", fill="both", expand=True)
 
-		render_origins_checkbox = tk.Checkbutton(view_button_list, text = "Render Origins", variable = self.picoToolData.render_origins, onvalue = 1, offvalue = 0, command = self.picoToolData.notify_update_render_listeners)
+		render_origins_checkbox = make_checkbutton(view_button_list, text = "Render Origins", variable = self.picoToolData.render_origins, onvalue = 1, offvalue = 0, command = self.picoToolData.notify_update_render_listeners)
 		render_origins_checkbox.pack(side="right")
 
-		background_color_button = tk.Button(view_button_list, text = "Change Background Color", command = self.increment_background_color)
+		background_color_button = make_button(view_button_list, text = "Change Background Color", command = self.increment_background_color)
 		background_color_button.pack(side="right")
 
 	def update_background_color(self):
@@ -3044,6 +3050,21 @@ def get_associated_filename(original_path, addition, ext, make_unique = True):
 	# otherwise just return the original!
 	return filename + addition + ext
 
+def make_button(*args, **kwargs):
+	# this is so that we can make ttk buttons on mac but tk buttons on windows
+	if sys.platform.startswith("darwin"):
+		return ttk.Button(*args, **kwargs)
+	else:
+		# on windows/linux
+		return tk.Button(*args, **kwargs)
+
+def make_checkbutton(*args, **kwargs):
+	# this is so that we can make ttk buttons on mac but tk buttons on windows
+	if sys.platform.startswith("darwin"):
+		return ttk.Checkbutton(*args, **kwargs)
+	else:
+		# on windows/linux
+		return tk.Checkbutton(*args, **kwargs)
 
 if __name__ == "__main__":
 	root = tk.Tk()
