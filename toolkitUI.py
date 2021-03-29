@@ -435,7 +435,7 @@ class ImageColorEditingPage(Page):
 		for i in range(len(colors)):
 			button1 = None
 			if sys.platform.startswith("darwin"):
-				button1 = ttk.Button(self.color_button_frame, text=color_names[i], \
+				button1 = ttk.Button(self.color_button_frame, text=color_names[i], width=-1, \
 					command = lambda i = i: self.select_color(i))
 			else:
 				# windows/linux which work with tk buttons
@@ -3053,7 +3053,7 @@ def get_associated_filename(original_path, addition, ext, make_unique = True):
 def make_button(*args, **kwargs):
 	# this is so that we can make ttk buttons on mac but tk buttons on windows
 	if sys.platform.startswith("darwin"):
-		return ttk.Button(*args, **kwargs)
+		return ttk.Button(*args, width=-1, **kwargs)
 	else:
 		# on windows/linux
 		return tk.Button(*args, **kwargs)
@@ -3061,7 +3061,7 @@ def make_button(*args, **kwargs):
 def make_checkbutton(*args, **kwargs):
 	# this is so that we can make ttk buttons on mac but tk buttons on windows
 	if sys.platform.startswith("darwin"):
-		return ttk.Checkbutton(*args, **kwargs)
+		return ttk.Checkbutton(*args, width=-1, **kwargs)
 	else:
 		# on windows/linux
 		return tk.Checkbutton(*args, **kwargs)
