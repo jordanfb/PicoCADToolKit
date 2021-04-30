@@ -22,7 +22,6 @@ import webbrowser # for opening my steam page!
 from picoCADParser import * # my command line code!
 from picoCADDragAndDrop import * # my semi-useless code for windows tools XD
 
-import sys
 from PIL import ImageTk,Image
 
 
@@ -728,7 +727,7 @@ class IntroPage(Page):
 
 		load_roll_die_link = tk.Label(self, text="Check out my game Load Roll Die on Steam!", fg="blue", cursor="hand2")
 		load_roll_die_link.pack()
-		load_roll_die_link.bind("<Button-1>", lambda e: webbrowser.open_new("https://store.steampowered.com/app/1410140/Load_Roll_Die/"))
+		load_roll_die_link.bind("<Button-1>", lambda e: webbrowser.open_new("https://store.steampowered.com/app/1410140?utm_source=picocadtoolkit"))
 
 		# now the warning message!
 		label = tk.Label(self, text="\nTHIS IS EXPERIMENTAL.\nSAVE A BACKUP OF YOUR FILE.\nTHIS WILL SAVE OVER YOUR FILE\nI AM NOT RESPONSIBLE FOR YOUR FILE BEING MESSED UP\nI EVEN MADE A BUTTON FOR YOU!")
@@ -807,6 +806,8 @@ class IntroPage(Page):
 
 	def update_file_path_display(self):
 		self.filepath_string_var.set(self.filename)
+		# now also update the file displayed on the menu bar!
+		self.winfo_toplevel().title("Jordan's picoCAD Toolkit - " + str(os.path.basename(self.filename)))
 
 	def quit(self):
 		# print("Should quit!")
@@ -2666,10 +2667,10 @@ class MainToolPage(Page):
 			self.openInPicoCad = make_button(self, textvariable = self.openInPicoCadText, command = self.test_open_in_picoCAD)
 			self.openInPicoCad.pack()
 
-		self.reloadFile = make_button(self, text = "Reload File", command = self.reload_file_check_if_saved)
+		self.reloadFile = make_button(self, text = "Reload File (Discard Changes)", command = self.reload_file_check_if_saved)
 		self.reloadFile.pack()
 
-		self.save_backup_button = make_button(self, text = "Save A Copy of the Open Data", command = self.save_backup_file)
+		self.save_backup_button = make_button(self, text = "Save A Copy", command = self.save_backup_file)
 		self.save_backup_button.pack()
 
 		self.saveChanges = make_button(self, text = "Save Changes (OVERWRITE FILE)", command = self.save_overwrite)
