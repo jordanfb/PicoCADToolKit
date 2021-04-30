@@ -115,6 +115,11 @@ colors
 - Added a stats page that shows estimated file size, estimated percentage full, and number of objects/vertices/faces
 - Added a triangulation/subdivision page that lets you subdivide objects while maintaining uv coordinates!
 
+## v0.5.1: The Filename Update
+
+- Cleaned up the buttons that reload/save/save a copy of the file
+- Added the file currently being edited to the titlebar of the window
+
 # Thanks:
 
 Thanks so much to Johan Peitz [Twitter: @johanpeitz](https://twitter.com/johanpeitz) for making picoCAD and inspiring this project!
