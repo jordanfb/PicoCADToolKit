@@ -456,8 +456,8 @@ class PicoObject:
 		self.dirty = True
 
 	def round_vertices(self, nearest):
-		for v in self.vertices:
-			v.round_to_nearest(nearest)
+		for i in range(len(self.vertices)):
+			self.vertices[i] = self.vertices[i].round_to_nearest(nearest)
 		self.dirty = True
 
 	def is_dirty(self):
