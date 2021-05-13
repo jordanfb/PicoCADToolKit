@@ -120,6 +120,10 @@ colors
 - Cleaned up the buttons that reload/save/save a copy of the file
 - Added the file currently being edited to the titlebar of the window
 
+## v0.5.2: Vertex Rounding Hotfix
+
+- It was rounding the vertex positions and then throwing away that data! Now it correctly rounds vertex positions to the nearest .25
+
 # Thanks:
 
 Thanks so much to Johan Peitz [Twitter: @johanpeitz](https://twitter.com/johanpeitz) for making picoCAD and inspiring this project!
