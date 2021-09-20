@@ -120,6 +120,11 @@ class PicoFace:
 			self.uvs[i] = coord.copy()
 		self.dirty = True
 
+	def clampUVs(self):
+		for uv in self.uvs:
+			uv.clampToUVSize()
+		self.dirty = True
+
 	def output_save_text(self):
 		# the text that'll get printed.
 		o = "{"
@@ -455,6 +460,132 @@ class PicoObject:
 			f.flip_normals()
 		self.dirty = True
 
+	def find_used_face_colors(self):
+		used = {}
+		for i in range(16):
+			used[i] = 0
+		# now see what colors are actually used!
+		for face in self.faces:
+			used[face.color] += 1
+		return used
+
+	def find_least_used_face_color(self):
+		used = self.find_used_face_colors()
+		least_color = -1
+		count = 0
+		for k, v in used.items():
+			if least_color == -1 or v < count:
+				least_color = k
+				count = v
+		return least_color
+
+	def fill_holes(self, uv_scale = 1):
+		# basically we loop over all the verts until we find anyone with missing neighbor verts
+		edge_connections = {}
+		for i in range(1, len(self.vertices)+1):
+			# check if any of those have missing verts!
+			edge_connections[i] = self.find_missing_neighbor_verts(i)
+		loops = self.find_hole_loops(edge_connections)
+		# now I guess we should fill them?
+		# print(str(loops), str(edge_connections)) # let's just print it for now!
+		color = self.find_least_used_face_color()
+		for loop in loops:
+			print("Filling a hole between " + str(loop))
+			# PicoFace(obj, vertices, uvs, color, doublesided, notshaded, priority, nottextured)
+			new_uvs = [SimpleVector(4, 4) for v in loop] # just make random UVs for this lol...
+			new_face = PicoFace(self, loop, new_uvs, color, doublesided=True, nottextured = True)
+			new_face.test_create_normals(scale = uv_scale) # project the normal so it's kinda okay! Who knows if it'll work well or not...
+
+			self.add_face(new_face)
+		return len(loops)
+
+	def find_hole_loops(self, connections):
+		loops = []
+		keys = list(connections.keys())
+		if len(keys) == 0:
+			return loops # no loops!
+		else:
+			# probably at least one loop? Who knows!
+			while len(keys) > 0:
+				starting_point = keys[0]
+				loop = self.find_loop(starting_point, keys, connections)
+				if len(loop) >= 3:
+					# only if the loop would make a full, useful face do we add the loop!
+					loops += [loop]
+		return loops
+
+	def find_loop(self, starting_point, keys, connections):
+		loop = [starting_point]
+		pos = starting_point
+		while pos in keys:
+			keys.remove(pos)
+			# now find what it's connected to!
+			next_pos = -1
+			if pos in connections:
+				for i in range(len(connections[pos])):
+					if connections[pos][i] in keys:
+						# then we haven't visited it yet!
+						next_pos = connections[pos][i]
+						break
+			if next_pos != -1:
+				# then we found one!
+				loop += [next_pos]
+				pos = next_pos
+			else:
+				break # I guess that's hopefully a loop???
+		return loop
+
+	def find_missing_neighbor_verts(self, vert_index):
+		# loop over all the faces, and check that this vertex isn't on the edge of a hole!
+		# we basically just check that all the edge pairs that are connected to this vertex exist twice!
+		# (or more I guess to prevent errors if people manually edit it)
+		connected_vertices = {}
+		for f in self.faces:
+			for i in range(len(f.vertices)):
+				# I believe these are 1 indexed because of lua.
+				if f.vertices[i] == vert_index:
+					# then we want to check all the connected vertices in this face!
+					# just find the neighboring vertices.
+					following = i
+					previous = i
+					for j in range(len(f.vertices)):
+						# basically we're just going to continue until we find a different vertex.
+						# the only reason why we aren't just taking the next index and previous index is because technically
+						# these faces can have duplicate vertices...
+						found_different = True
+						if f.vertices[following] == vert_index:
+							# then increment it!
+							following += 1
+							following %= len(f.vertices)
+							found_different = False
+						if f.vertices[previous] == vert_index:
+							# then decrement it!
+							previous -= 1
+							if previous < 0:
+								previous = len(f.vertices) - 1
+							found_different = False
+						if found_different:
+							break
+					# now we have different vertices to compare against!
+					following = f.vertices[following]
+					previous = f.vertices[previous]
+					if following not in connected_vertices:
+						connected_vertices[following] = 0
+					if previous not in connected_vertices:
+						connected_vertices[previous] = 0
+					connected_vertices[following] += 1
+					connected_vertices[previous] += 1
+					break # now that we've found this vertex in this face no need to search for others?
+		# now we figure out if we have any missing verticecs! Each vertex key should be in it twice.
+		# if not, then we know we have a hole to fill and we can recursively use this function to find the other vertices!
+		bad_connection_indices = []
+		for vert, count in connected_vertices.items():
+			if count == 1:
+				# then we have a missing vertex connection!
+				# We're requiring each to be at least 2
+				bad_connection_indices += [vert]
+		return bad_connection_indices
+
 	def round_vertices(self, nearest):
 		for i in range(len(self.vertices)):
 			self.vertices[i] = self.vertices[i].round_to_nearest(nearest)
@@ -658,6 +789,10 @@ class PicoObject:
 			# creating the faces for each design, and adding those faces to the new faces list!
 		# swap out the faces for the new ones!
 		self.faces = new_faces
+		self.dirty = True
+
+	def add_face(self, face):
+		self.faces.append(face)
 		self.dirty = True
 
 	def triangulate_ngons(self, num_sides_filter=-1):
@@ -1165,6 +1300,10 @@ class SimpleVector:
 
 	def normalize(self):
 		return self.copy() / self.magnitude()
+
+	def clampToUVSize(self):
+		self.x = max(0, min(16, self.x))
+		self.y = max(0, min(15, self.y))
 
 	def mat_mult(self, mat):
 		# the matrix is [[1,2,3,4],[5,6,7,8],[9,10,11,12],[0,0,0,1]]

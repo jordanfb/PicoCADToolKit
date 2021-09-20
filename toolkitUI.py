@@ -1120,6 +1120,7 @@ class MeshEditingMaster(Page):
 
 		# initialize the tab frames here:
 		self.merging_frame = tk.Frame(mesh_editing_tabs)
+		self.face_frame = tk.Frame(mesh_editing_tabs)
 		# self.merging_frame.pack() # don't pack it because it's a tab now!
 		self.general_mesh_editing_frame = tk.Frame(mesh_editing_tabs)
 		# self.general_mesh_editing_frame.pack() # don't pack it because it's a tab now!
@@ -1129,6 +1130,9 @@ class MeshEditingMaster(Page):
 		# General Tab
 		tab1 = self.general_mesh_editing_frame
 		mesh_editing_tabs.add(tab1, text="General")
+		# face tab
+		faceTab = self.face_frame
+		mesh_editing_tabs.add(faceTab, text="Faces")
 		# Merging Tab
 		tab2 = self.merging_frame
 		mesh_editing_tabs.add(tab2, text="Merging")
@@ -1247,17 +1251,23 @@ class MeshEditingMaster(Page):
 		self.invert_normals_button = make_button(self.general_mesh_editing_frame, text = "Flip Mesh Normals", command = self.invert_normals)
 		self.invert_normals_button.pack()
 
-		self.remove_invalid_faces_button = make_button(self.general_mesh_editing_frame, text = "Remove Faces with < 3 Unique Vertices", command = self.remove_invalid_faces)
-		self.remove_invalid_faces_button.pack()
-
-		self.remove_invalid_faces_button = make_button(self.general_mesh_editing_frame, text = "Round Vertices to Nearest .25", command = self.round_vertices)
-		self.remove_invalid_faces_button.pack()
+		self.round_vertices_button = make_button(self.general_mesh_editing_frame, text = "Round Vertices to Nearest .25", command = self.round_vertices)
+		self.round_vertices_button.pack()
 
 		self.duplicate_mesh_button = make_button(self.general_mesh_editing_frame, text = "Duplicate mesh", command = self.duplicate_mesh)
 		self.duplicate_mesh_button.pack()
 
 		self.delete_mesh_button = make_button(self.general_mesh_editing_frame, text = "Delete mesh", command = self.delete_mesh)
 		self.delete_mesh_button.pack()
+
+		# make the face editing gab
+		# self.face_frame
+		self.remove_invalid_faces_button = make_button(self.face_frame, text = "Remove Faces with < 3 Unique Vertices", command = self.remove_invalid_faces)
+		self.remove_invalid_faces_button.pack()
+
+		self.fill_holes_button = make_button(self.face_frame, text = "Fill Holes (Experimental)", command = self.fill_holes)
+		self.fill_holes_button.pack()
+
 
 		# make the origins editing tab!
 		self.origins_editing_tab
@@ -1537,6 +1547,14 @@ class MeshEditingMaster(Page):
 		for o in objs:
 			f += o.remove_invalid_faces()
 		print("Removed " + str(f) + " faces")
+		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
+
+	def fill_holes(self):
+		objs = self.picoToolData.get_selected_mesh_objects()
+		f = 0
+		for o in objs:
+			f += o.fill_holes()
+		print("Filled " + str(f) + " holes")
 		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
 
 	def merge_overlapping_verts(self):
@@ -2436,6 +2454,9 @@ class UVUnwrappingPage(Page):
 		round_uvs_to_quarter_unit = make_button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
 		round_uvs_to_quarter_unit.pack()
 
+		clamp_uvs_to_screen_button = make_button(self, text = "Clamp UVs to Screen", command = self.clamp_uvs_to_screen)
+		clamp_uvs_to_screen_button.pack()
+
 		# # now add the button to space out the normals!
 
 		# label = tk.Label(self, text="Pack:") # to space things out!
@@ -2541,6 +2562,12 @@ class UVUnwrappingPage(Page):
 				self.pack_naively()
 			elif self.picoToolData.auto_pack_generated_uvs.get() == 2:
 				self.pack_largest_first()
+		self.picoToolData.notify_update_render_listeners()
+
+	def clamp_uvs_to_screen(self):
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.clampUVs()
 		self.picoToolData.notify_update_render_listeners()
 
 	def round_uvs_to_quarter_unit(self):

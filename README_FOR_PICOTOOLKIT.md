@@ -107,7 +107,11 @@ whichever mesh(es) are selected at whatever scale is entered!
 value, this tool is capable of more precision. If you intend to move the UVs around
 in PicoCAD though it'll round the positions, so it may be worth rounding it here
 beforehand.
-6) "Show UVs" This button will open up your default image viewer and show a 128x128
+6) "Clamp UVs to Screen" Sometimes a face's UVs will end up off the screen for
+whatever reason. Pressing this will move any offscreen vertices onto the edge of
+the screen. If the entire face is off screen it will be a flat line on the edge, but
+you can manually reach them and move the UV coordinates to their correct position.
+7) "Show UVs" This button will open up your default image viewer and show a 128x128
 pixel image that has all the current UV maps on it!
 
 
@@ -231,19 +235,37 @@ to the nearest 0, .25, .5, or .75 along all three axes.
 out! Not to worry, you can use this "Flip Mesh Normals" button to flip them back again. Or, if you want
 your mesh to appear inside out you can use this button to achieve that!
 
-4) "Remove Faces with <3 Vertices"
-If you combine meshes or shrink down faces of a primative to achieve the shape you want you may end up with
-invisible faces! One way to get rid of them is to merge the vertices (in the "Merging" tab) or you can remove
-those faces directly with this button!
-
-5) "Round vertices to nearest .25"
+4) "Round vertices to nearest .25"
 If you are moving vertices around with scaling or other tools you may find that the vertices aren't precisely
 on the snapping points in picoCAD! If you want them to be, click this button and it will round each vertex
 position to the nearest .25 unit in every dimension.
 
-6) "Duplicate Mesh" will duplicate the currently selected mesh and append `_dup` to the name of the copy!
+5) "Duplicate Mesh" will duplicate the currently selected mesh and append `_dup` to the name of the copy!
 
-7) "Delete Mesh" will delete the currently selected mesh from the file! This can't be undone so make a backup!
+6) "Delete Mesh" will delete the currently selected mesh from the file! This can't be undone so make a backup!
+
+
+### Faces:
+This section is for editing faces!
+
+1) "Remove Faces with <3 Vertices"
+If you combine meshes or shrink down faces of a primative to achieve the shape you want you may end up with
+invisible faces! One way to get rid of them is to merge the vertices (in the "Merging" tab) or you can remove
+those faces directly with this button!
+
+2) "Fill Holes (Experimental)"
+One of the great frustrations is accidentally deleting a face and being unable to fix it! Now you can!
+This is an experimental tool so please make a backup before use! It shouldn't mess up anything aside from
+the holes it fills but can't hurt to be safe!
+This button will fill every hole in all the selected meshes (if you only want one hole filled you'll have to
+delete the other faces created after you run the tool). If only a single face was deleted by accident it
+*should* replace it correctly. If you have multiple faces missing that share an edge then the hole will be
+filled by one, likely misshapen face.
+Any created faces will be set as double-sided (Figuring out which direction is "out" is still a work in
+progress), no-texture, and the color will be set as the least used color in the mesh to help you find it.
+The UV coordinates should be unwrapped using the automatic unwrapping tool at a scale of 1. This will likely not
+work well for faces that turn 90 or more but you can manually adjust them later. If the face is particularly 
+large the UVs may spread offscreen -- use the Clamp UVs to Screen tool in the UV menu to move it back on screen.
 
 
 #### Merging:

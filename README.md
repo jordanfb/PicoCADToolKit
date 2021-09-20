@@ -31,7 +31,9 @@ Here are some items that we're interested in adding to the toolkit! If you have 
 - - [ ] Rotate face normals (physically, not by swapping the vertices)
 	- needs face selection though... hmmmm.
 - - [ ] Consider changing around the output_save_text function of a picoSave to use the parsed header functions not the original text
-
+- - [ ] Round to Nearest N button to let people round their vertices to the nearest value of their choice.
+- - [ ] Round to N decimal places as well would work better for rotated objects and still reduce file size
+- - [ ] Delete unused UV coordinates (i.e. if the face has no-texture enabled) to save space!
 
 # Changelogs:
 
@@ -120,9 +122,17 @@ colors
 - Cleaned up the buttons that reload/save/save a copy of the file
 - Added the file currently being edited to the titlebar of the window
 
-## v0.5.2: Vertex Rounding Hotfix
+## v0.5.2: The Vertex Rounding Hotfix
 
 - It was rounding the vertex positions and then throwing away that data! Now it correctly rounds vertex positions to the nearest .25
+
+## v0.6: The Hole Filling Update
+
+- Added hole filling! It's far from perfect but can fix some accidental deletions and maybe create some cool shapes.
+	- Currently it's still experimental, so as always make a backup!
+	- When a hole is filled it's replaced with a double sided face in the least used color that has the no-texture flag set to help you find it.
+- Added UV clamping to get offscreen UV vertices back into an editable location.
+
 
 # Thanks:
 
