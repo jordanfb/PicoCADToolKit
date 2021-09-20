@@ -5,6 +5,8 @@ Made by Jordan Faas-Bush
 This is a GUI wrapper for the picoCAD parser!
 Please ignore the mess.
 
+https://github.com/jordanfb/PicoCADToolKit
+
 """
 
 

@@ -5,6 +5,8 @@ Made by Jordan Faas-Bush
 This is a script that will parse picoCAD save files and load them into a python class! It's pretty handy.
 I'm also implementing a GUI wrapper for it so that people who don't want to run python can use it!
 
+https://github.com/jordanfb/PicoCADToolKit
+
 """
 
 
@@ -490,11 +492,11 @@ class PicoObject:
 		# print(str(loops), str(edge_connections)) # let's just print it for now!
 		color = self.find_least_used_face_color()
 		for loop in loops:
-			print("Filling a hole between " + str(loop))
 			# PicoFace(obj, vertices, uvs, color, doublesided, notshaded, priority, nottextured)
 			new_uvs = [SimpleVector(4, 4) for v in loop] # just make random UVs for this lol...
 			new_face = PicoFace(self, loop, new_uvs, color, doublesided=True, nottextured = True)
 			new_face.test_create_normals(scale = uv_scale) # project the normal so it's kinda okay! Who knows if it'll work well or not...
+			print("Filling a hole between " + str(loop) + " with the color " + color_names[color])
 
 			self.add_face(new_face)
 		return len(loops)
