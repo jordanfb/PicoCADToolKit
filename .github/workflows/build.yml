@@ -80,7 +80,7 @@ jobs:
             OUT_FILE_NAME: PicoToolkit_linux.zip
             ASSET_MIME: application/zip
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
@@ -116,7 +116,7 @@ jobs:
     needs: createrelease
     runs-on: [ubuntu-latest]
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Load Release URL File from release job
       uses: actions/download-artifact@v1
       with:
