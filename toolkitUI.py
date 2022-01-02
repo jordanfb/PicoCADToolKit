@@ -15,6 +15,7 @@ import tkinter as tk
 import sys
 import os
 from tkinter.filedialog import askopenfilename
+from tkinter import simpledialog
 from shutil import copyfile
 from tkinter import messagebox
 from tkinter import ttk
@@ -1089,9 +1090,23 @@ class MeshEditingMaster(Page):
 		# first things first select the mesh!
 		label = tk.Label(self.select_frame, text="Select Mesh To Edit:")
 		label.pack(side="top", fill="both", expand=False)
+
+
+		# we're putting the dropdown and the rename button in a horizontal element
+		horizontal_frame = tk.Frame(self.select_frame)
+		horizontal_frame.pack()
+
 		# then create the dropdown menu! It'll be synced between this and the UV editing page!
-		self.mesh_to_unwrap_entry = IntegerOutputOptionMenu(self.select_frame, [("All Meshes", -1), ("1: This is a test", 1), ("2: if you see this please tell Jordan", 2)])
-		self.mesh_to_unwrap_entry.pack()
+		self.mesh_to_unwrap_entry = IntegerOutputOptionMenu(horizontal_frame, [("All Meshes", -1), ("1: This is a test", 1), ("2: if you see this please tell Jordan", 2)])
+		self.mesh_to_unwrap_entry.pack(side="left")
+
+		self.rename_object_button = make_button(horizontal_frame, text="Rename Object", command=self.rename_object)
+		self.rename_object_button.pack(side="right")
+		# add a listener to make this button active or disabled if we're selecting multiple objects
+		self.picoToolData.add_selected_mesh_listener(self.set_rename_button_active_when_selecting_single_objects)
+
+		# now back to the regular buttons etc.
+
 		if self.picoToolData.picoSave != None:
 			self.mesh_to_unwrap_entry.build_choices_from_picoSave(self.picoToolData.picoSave)
 		self.mesh_to_unwrap_entry.add_listener(self.picoToolData.set_selected_mesh)
@@ -1347,6 +1362,15 @@ class MeshEditingMaster(Page):
 		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 
+	def set_rename_button_active_when_selecting_single_objects(self, selected_mesh_index):
+		self.set_rename_object_active_state(selected_mesh_index != -1) # active if we aren't selecting all objects
+
+	def set_rename_object_active_state(self, active):
+		if active:
+			self.rename_object_button["state"] = "normal"
+		else:
+			self.rename_object_button["state"] = "disabled"
+
 	def create_subdivision_tab(self, frame):
 		# create the buttons etc. needed to subdivide the selected objects!
 		# currently we have Triangulate meshes (and you can select which faces to limit it to!)
@@ -1370,6 +1394,27 @@ class MeshEditingMaster(Page):
 			icon='warning'
 		)
 		return msg_box == 'yes'
+
+	def rename_object(self):
+		# rename the selected object, probably don't rename it if it's all things selected
+		objs = self.picoToolData.get_selected_mesh_objects()
+		if len(objs) != 1:
+			print("Can only rename one object at a time currently")
+		else:
+			new_name = simpledialog.askstring(title="Rename " + str(objs[0].name), prompt="What's your new name for '" + str(objs[0].name) + "'?",
+																				initialvalue=str(objs[0].name))
+			if new_name == None:
+				pass # then they canceled the input and don't want to change the name
+			elif "'" in new_name:
+				print("Error: You can't have single quotes in the object name!")
+			elif len(new_name) > 0 and objs[0].name != new_name:
+				objs[0].name = new_name
+				objs[0].dirty = True
+				self.picoToolData.notify_update_render_listeners()
+				self.picoToolData.notify_picoSave_listeners()
+				self.picoToolData.notify_selected_mesh_listeners()
+			else:
+				print("Object name can't be empty")
 
 	def triangulate_faces(self):
 		# triangulate the faces of the selected type!
