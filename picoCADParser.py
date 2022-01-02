@@ -882,6 +882,52 @@ class PicoObject:
 			self.faces.append(newFace)
 		self.dirty = True
 
+	def split_separate_meshes_into_individual_objects(self):
+		# this function will floodfill all the faces of this object and find which faces are connected and which aren't.
+		# it'll then separate it into however many objects (this is so that you can combine other objects and then do actions and then separate
+		# them later for nice workflows!)
+		# we'll just create new objects with all the faces and all the vertices from each section and then remove unused vertices from those objects
+		# for now we're actually going to return a list of all the sets of faces, because we can't duplicate objects from this.
+		# we'll use this function from a picoSave and that way things work nicely
+		vertex_to_mesh_dictionary = {}
+		for f in self.faces:
+			meshes_face_is_part_of = []
+			for v in f.vertices:
+				# if a vertex is in any of the sets then we keep track of which!
+				if v in vertex_to_mesh_dictionary:
+					meshes_face_is_part_of.append(vertex_to_mesh_dictionary[v])
+			# now we have all the meshes that this face is part of, and we combine them into a single mesh.
+			if len(meshes_face_is_part_of) == 0:
+				# then we have to make a new mesh!
+				new_mesh = set( [f] ) # make a new mesh with just this face in it!
+				new_mesh_vertices = set()
+				for v in f.vertices:
+					vertex_to_mesh_dictionary[v] = (new_mesh, new_mesh_vertices) # a tuple of the mesh set and the vertex set
+					new_mesh_vertices.add(v)
+			else:
+				# then we have to add all the vertices and all the faces that this face touches into that first mesh!
+				mesh_to_add_to = meshes_face_is_part_of[0][0]
+				mesh_to_add_to.add(f)
+				mesh_vertices_to_add_to = meshes_face_is_part_of[0][1]
+				for v in f.vertices:
+					mesh_vertices_to_add_to.add(v)
+					vertex_to_mesh_dictionary[v] = (mesh_to_add_to, mesh_vertices_to_add_to) # make sure all the vertices now point to this one.
+				# now we need to add all the other faces from the other meshes that this face joins together into the main mesh
+				for i in range(1, len(meshes_face_is_part_of)):
+					mesh_to_add_to.update(meshes_face_is_part_of[i][0])
+					mesh_vertices_to_add_to.update(meshes_face_is_part_of[i][1])
+					for v in meshes_face_is_part_of[i][1]:
+						# loop over all the vertices in each of the other meshes to update the dictionary
+						vertex_to_mesh_dictionary[v] = (mesh_to_add_to, mesh_vertices_to_add_to)
+		face_sets = []
+		for v in vertex_to_mesh_dictionary.values():
+			if v[0] not in face_sets:
+				face_sets.append(v[0])
+		# print(face_sets)
+		# print(len(face_sets))
+		return face_sets
+
+
 	def mark_clean(self):
 		self.dirty = False
 		for f in self.faces:
@@ -1172,7 +1218,28 @@ class PicoSave:
 		obj_new.dirty = True
 		obj_new.name += "_dup"
 		self.objects.append(obj_new)
-		print("Duplicated object as: " + str(obj_new))
+		return obj_new
+
+	def separate_object_meshes(self, obj):
+		# this function will take an object and split it into disjoint meshes, basically the opposite of merging meshes
+		sub_meshes = obj.split_separate_meshes_into_individual_objects()
+		# if there are more than 1 sub_meshes then we need to split them apart!
+		if len(sub_meshes) <= 1:
+			print("Only " + str(len(sub_meshes)) + " disjoint mesh(es), so can't separate the object!")
+			return
+		else:
+			# we have multiple disjoint meshes in this object so we need to split it up!
+			split_objs = [obj]
+			for i in range(1, len(sub_meshes)):
+				# duplicate the original object to keep the vertices the same!
+				split_objs.append(self.duplicate_object(obj))
+			for i in range(len(sub_meshes)):
+				new_obj = split_objs[i]
+				# now set the faces!
+				new_obj.faces = list(sub_meshes[i])
+				new_obj.remove_unused_vertices()
+			print("Separated the obj into " + str(len(split_objs)) + " objs")
+
 
 	def find_color_coordinates(self, color_index):
 		# search through the texture stored in this save file and try to find the color!

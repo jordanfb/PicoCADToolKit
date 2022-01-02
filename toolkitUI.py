@@ -1181,6 +1181,12 @@ class MeshEditingMaster(Page):
 		self.merge_meshes_button = make_button(self.left_merging_frame, text="Merge Mesh into Selected Mesh", command=self.merge_mesh)
 		self.merge_meshes_button.pack()
 
+		# now add a space then add a button to split separate meshes!
+		label = tk.Label(self.left_merging_frame, text="")
+		label.pack()
+		self.split_separate_meshes_button = make_button(self.left_merging_frame, text="Split Separate Meshes Into Separate Objects", command=self.separate_mesh)
+		self.split_separate_meshes_button.pack()
+
 		label = tk.Label(self.right_merging_frame, text="Merge Vertices:")
 		label.pack(side="top", fill="both", expand=False)
 		# now we should put in our options! We have things like merging overlapping vertices
@@ -1442,7 +1448,8 @@ class MeshEditingMaster(Page):
 	def duplicate_mesh(self):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for obj in objs:
-			self.picoToolData.picoSave.duplicate_object(obj)
+			obj_new = self.picoToolData.picoSave.duplicate_object(obj)
+			print("Duplicated object as: " + str(obj_new))
 		# update the UI, object list changed!
 		self.picoToolData.notify_picoSave_listeners()
 
@@ -1484,6 +1491,13 @@ class MeshEditingMaster(Page):
 				t = t.mat_mult(y_rot_mat)
 				t = t.mat_mult(z_rot_mat)
 				o.vertices[i] = t
+		self.picoToolData.notify_update_render_listeners()
+
+	def separate_mesh(self):
+		objs = self.picoToolData.get_selected_mesh_objects()
+		for o in objs:
+			self.picoToolData.picoSave.separate_object_meshes(o)
+		self.picoToolData.notify_picoSave_listeners()
 		self.picoToolData.notify_update_render_listeners()
 
 	def merge_mesh(self, delete_origin=True):
