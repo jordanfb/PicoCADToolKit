@@ -199,10 +199,15 @@ This can and will change around your model's vertices and meshes! Please use wit
 MAKE A BACKUP!
 Again, this menu is divided into a header, several tabs, and a back button to return to the main tool menu.
 
-The header is pretty simple, composed of only a dropdown menu to choose the "Selected Mesh" i.e. which
-mesh to apply the operations to!
-This is a dropdown menu to select either All Meshes or a specific mesh. Some operations will require
-a specific mesh selected, but most will work on all meshes if you let it!
+The header is pretty simple, composed of only two things.
+The first is a dropdown menu to choose the "Selected Mesh" i.e. which
+mesh to apply the operations to. This is a dropdown menu to select either All Meshes or a specific mesh.
+Some operations will require a specific mesh selected, but most will work on all meshes if you let it!
+Next to it is a button to rename the current object. You can only rename individual objects at a time,
+names must be non-empty and you can't use the single quote character in the names (i.e. ').
+I wouldn't reccomend straying from simple ascii characters but what's life without a little experimentation!
+Keep in mind these names take up file size so a single character name technically leaves more room for more
+detail in your model.
 
 Next we reach the mesh editing tabs!
 Mesh editing is divided up into three categories: General, Merging, and Origin Editing.
@@ -282,6 +287,11 @@ It will not allow you to copy a mesh into every mesh at once (because that would
 3) If you want to move the contents of a mesh into another mesh and remove the original use "Merge Mesh Into
 Selected Mesh" instead of Copy. This will remove the original mesh and move it into the selected mesh.
 4) There is currently no way to separate these meshes so PLEASE MAKE A BACKUP
+
+On the bottom left there's a button to separate merged meshes. Select the object(s) that you want to separate
+in the selected mesh to edit dropdown (that you can set in the header) then press the button.
+If the object has multiple non-connected meshes (also called disjoint meshes) then it'll separate them each into
+individual objects, each with "dup" appended to the end of their object name.
 
 On the right is the menu for merging vertices:
 If you like overlapping vertices to create the perfect shape this menu is for you!

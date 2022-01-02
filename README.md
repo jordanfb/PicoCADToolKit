@@ -23,8 +23,6 @@ Please make many backups! There's even a button in the toolkit that will do that
 
 Here are some items that we're interested in adding to the toolkit! If you have more ideas or want to contribute message @quickpocket#2838 on the picoCAD discord server (The Megadome)!
 
-- - [ ] Tool for separating objects if they aren't connected? Hmmmm
-	- this is only really useful if there's a way to split an edge, which I'm not sure how to make so maybe not just yet
 - - [ ] Tool for merging/unmerging the uvs of a mirrored face?
 - - [ ] Tool for unwrapping neighboring faces using the same basis if the normals are similar
 	- Plus then connect them by linking the UVs!
@@ -133,6 +131,10 @@ colors
 	- When a hole is filled it's replaced with a double sided face in the least used color that has the no-texture flag set to help you find it.
 - Added UV clamping to get offscreen UV vertices back into an editable location.
 
+## v0.7 Disjoint Mesh Separation
+
+- Added a button to separate disjoint meshes into separate objects (basically the opposite of merging two objects together)
+- Added a button to rename objects
 
 # Thanks:
 
