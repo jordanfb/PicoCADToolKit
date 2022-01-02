@@ -960,14 +960,14 @@ class StatsPage(Page):
 		self.hexagon_string.set(face_sizes[6])
 		self.octagon_string.set(face_sizes[8])
 		# now display if there are any other odd face sizes!
-		odd_string = "Odd Faces:"
+		odd_string = "Odd Faces: "
 		for i in range(len(face_sizes)):
 			# if it's not one of the classic face sizes add it to the string display
 			if i == 3 or i == 4 or i == 5 or i == 6 or i == 8:
 				continue
 			if face_sizes[i] == 0:
 				continue # don't display it if it doesn't have any of them!
-			odd_string += str(i) + ":" + str(face_sizes[i]) + ","
+			odd_string += str(i) + ":" + str(face_sizes[i]) + ", "
 		odd_string = odd_string[:-1] # exclude the last comma!
 		self.odd_face_sizes.set(odd_string)
 
