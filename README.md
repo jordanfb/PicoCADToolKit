@@ -136,6 +136,12 @@ colors
 - Added a button to separate disjoint meshes into separate objects (basically the opposite of merging two objects together)
 - Added a button to rename objects
 
+## v0.8 Cleanup and Improvements
+
+- Slightly improved hidden face removal
+- Implemented rounding to any value (hopefully correctly trimming the significant figures as well)
+- Updated the version of tkinter for improved compatibility
+
 # Thanks:
 
 Thanks so much to Johan Peitz [Twitter: @johanpeitz](https://twitter.com/johanpeitz) for making picoCAD and inspiring this project!

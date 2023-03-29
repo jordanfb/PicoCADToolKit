@@ -16,6 +16,7 @@ import os
 import sys
 import math
 from PIL import Image, ImageDraw
+from decimal import *
 
 
 colors = [
@@ -79,6 +80,16 @@ def make_128_pico_palatte():
 			img.putpixel((x, y), tuple(c))
 	img.show()
 	return img
+
+
+def limit_sigfigs(value, sigfigs):
+	s = '{0:0.{prec}g}'.format(value, prec=sigfigs)
+	return float(s)
+
+def normalize_fraction(d):
+    normalized = d.normalize()
+    sign, digit, exponent = normalized.as_tuple()
+    return normalized if exponent <= 0 else normalized.quantize(1)
 
 class PicoFace:
 	def __init__(self, picoObject, vertexIndices, uvs, color = 0, doublesided = False, notshaded = False, priority = False, nottextured = False):
@@ -643,12 +654,24 @@ class PicoObject:
 			# if a face is made up entirely of vertices that are being merged with a different vertex then remove it!
 			for f in self.faces:
 				covered = True
+				unique_verts = set()
 				for v in f.vertices:
-					if v-1 not in to_be_merged:
-						# then it's not being merged!
+					if v-1 in overlapping:
+						# then we use the replaced vertex in the set!
+						# that way we only replace the vertex if everything is replaced _and_ the face is a line or point.
+						unique_verts.add(overlapping[f.vertices[i]-1] + 1)
+					else:
+						# otherwise it's not being merged!
 						covered = False
 						break
-				if covered:
+				if covered and len(unique_verts) < 3:
+					# this will remove duplicated faces but it won't remove faces that are identical.
+					# it also won't clean up faces with duplicate verts (like 1, 2, 2, 3, 4 won't remove the second 2)
+					# I would like to do that at some point.
+					# I should add another checkmark to delete duplicate faces because that way if it's intentional you can keep them!
+					# that makes sense yeah.
+					# So when I return to this I'll have a checkmark to delete duplicate faces, and inside this I want to add code to
+					# remove duplicate verts from the face? That makes sense I think.
 					remove_faces.append(f)
 					self.dirty = True
 			# now remove all the faces that are covered!
@@ -1342,24 +1365,24 @@ class SimpleVector:
 		# pass in coords!
 		# print(type(x_or_list), type(x_or_list) == list, x_or_list)
 		if type(x_or_list) == list or type(x_or_list) == tuple:
-			self.x = 0
-			self.y = 0
-			self.z = 0
+			self.x = Decimal(0)
+			self.y = Decimal(0)
+			self.z = Decimal(0)
 			if len(x_or_list) >=  1:
-				self.x = x_or_list[0]
+				self.x = Decimal(x_or_list[0])
 			if len(x_or_list) >=  2:
-				self.y = x_or_list[1]
+				self.y = Decimal(x_or_list[1])
 			if len(x_or_list) >=  3:
-				self.z = x_or_list[2]
+				self.z = Decimal(x_or_list[2])
 		elif (type(x_or_list)) == SimpleVector:
-			self.x = x_or_list.x
-			self.y = x_or_list.y
-			self.z = x_or_list.z
+			self.x = Decimal(x_or_list.x)
+			self.y = Decimal(x_or_list.y)
+			self.z = Decimal(x_or_list.z)
 		else:
 			# we're using regular coords!
-			self.x = x_or_list
-			self.y = y
-			self.z = z
+			self.x = Decimal(x_or_list)
+			self.y = Decimal(y)
+			self.z = Decimal(z)
 
 	def magnitude(self):
 		return math.sqrt(self.x*self.x + self.y*self.y + self.z*self.z)
@@ -1429,6 +1452,14 @@ class SimpleVector:
 		return SimpleVector(x, y, z)
 
 	def round_to_nearest(self, nearest):
+		# annoyingly sometimes floating point imprecision leaves horrible miniscule values.
+		nearest_str = repr(float(nearest))
+		nearest = Decimal(nearest)
+		if "." in nearest_str:
+			# then we have a float! Let's try making the sigfigs real as well.
+			sigfigs = len(nearest_str.split(".")[1])
+			# return SimpleVector(limit_sigfigs(round(self.x / nearest)*nearest, sigfigs), limit_sigfigs(round(self.y/nearest)*nearest, sigfigs), limit_sigfigs(round(self.z/nearest)*nearest, sigfigs))
+			return SimpleVector(round(round(self.x / nearest)*nearest, sigfigs), round(round(self.y/nearest)*nearest, sigfigs), round(round(self.z/nearest)*nearest, sigfigs))
 		return SimpleVector(round(self.x / nearest)*nearest, round(self.y/nearest)*nearest, round(self.z/nearest)*nearest)
 
 	def dot(self, other):
@@ -1494,7 +1525,7 @@ class SimpleVector:
 			# return
 
 	def __str__(self):
-		return "<"+str(self.x) + ","+str(self.y)+","+str(self.z)+">"
+		return "<"+str(normalize_fraction(self.x)) + ","+str(normalize_fraction(self.y))+","+str(normalize_fraction(self.z))+">"
 
 	def __repr__(self):
 		return str(self)
@@ -1605,7 +1636,7 @@ def load_picoCAD_save(filepath):
 def float_to_str(f):
 	if int(f) == f:
 		return str(int(f))
-	return str(f)
+	return str(f).rstrip("0") # remove trailing 0s
 
 
 def parse_picoCAD_objects(json_text):
@@ -1737,8 +1768,23 @@ def equation_plane(x1, y1, z1, x2, y2, z2, x3, y3, z3, x, y, z):
 
 
 # if __name__ == "__main__":
-	# test stuff!
-	# test = [[1,2,3], {"a":"hello"}]
+# 	# test stuff!
+# 	# test = [[1,2,3], {"a":"hello"}]
+
+# 	test_vec = SimpleVector("1", "2.2", "3.25")
+
+# 	print(test_vec)
+# 	test_vec.round_to_nearest(.25)
+# 	print(test_vec)
+# 	x = Decimal("2.2")
+# 	# print(x)
+# 	print(round(x/Decimal(".25"))*Decimal(".25"))
+
+
+# 	l = [".1", "1.1", ".0001", "1.00001000", "15", "15.", "15.0", ".22"]
+
+# 	for i in l:
+# 		print(i, Decimal(i), normalize_fraction(Decimal(i)))
 
 	# make_128_pico_palatte()
 

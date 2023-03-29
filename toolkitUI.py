@@ -1274,8 +1274,15 @@ class MeshEditingMaster(Page):
 		self.invert_normals_button = make_button(self.general_mesh_editing_frame, text = "Flip Mesh Normals", command = self.invert_normals)
 		self.invert_normals_button.pack()
 
-		self.round_vertices_button = make_button(self.general_mesh_editing_frame, text = "Round Vertices to Nearest .25", command = self.round_vertices)
-		self.round_vertices_button.pack()
+		self.round_vertex_frame = tk.Frame(self.general_mesh_editing_frame)
+		self.round_vertex_frame.pack()
+		self.round_vertex_value = FloatEntry(self.round_vertex_frame, 0.25, width=5)
+		self.round_vertex_pos = make_button(self.round_vertex_frame, text = "Round Vertex To Nearest", command = lambda: self.round_vertices(self.round_vertex_value.float_value))
+		self.round_vertex_pos.pack(side="left")
+		self.round_vertex_value.pack(side="left")
+
+		# self.round_vertices_button = make_button(self.general_mesh_editing_frame, text = "Round Vertices to Nearest .25", command = self.round_vertices)
+		# self.round_vertices_button.pack()
 
 		self.duplicate_mesh_button = make_button(self.general_mesh_editing_frame, text = "Duplicate mesh", command = self.duplicate_mesh)
 		self.duplicate_mesh_button.pack()
@@ -1354,10 +1361,13 @@ class MeshEditingMaster(Page):
 		self.move_origin_to_origin = make_button(self.origins_editing_tab, text = "Move Origin to <0,0,0> World Coordinates", command = self.move_origin_to_world_origin)
 		self.move_origin_to_origin.pack()
 
-		# then the option to round it to the nearest .25
-		self.round_origin_pos = make_button(self.origins_editing_tab, text = "Round Origin To Nearest .25", command = self.round_origin_to_nearest_25)
-		self.round_origin_pos.pack()
-
+		# then the option to round it to the nearest value
+		self.round_origin_frame = tk.Frame(self.origins_editing_tab)
+		self.round_origin_frame.pack()
+		self.round_origin_value = FloatEntry(self.round_origin_frame, 0.25, width=5)
+		self.round_origin_pos = make_button(self.round_origin_frame, text = "Round Origin To Nearest", command = lambda: self.round_origin_to_nearest(self.round_origin_value.float_value))
+		self.round_origin_pos.pack(side="left")
+		self.round_origin_value.pack(side="left")
 
 		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
@@ -1483,10 +1493,17 @@ class MeshEditingMaster(Page):
 			o.move_origin_to_world_position(mid_point + offset)
 		self.picoToolData.notify_update_render_listeners()
 
-	def round_origin_to_nearest_25(self):
+	# def round_origin_to_nearest_25(self):
+	# 	objs = self.picoToolData.get_selected_mesh_objects()
+	# 	for o in objs:
+	# 		rounded = o.pos.round_to_nearest(.25)
+	# 		o.move_origin_to_world_position(rounded)
+	# 	self.picoToolData.notify_update_render_listeners()
+
+	def round_origin_to_nearest(self, value):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for o in objs:
-			rounded = o.pos.round_to_nearest(.25)
+			rounded = o.pos.round_to_nearest(value)
 			o.move_origin_to_world_position(rounded)
 		self.picoToolData.notify_update_render_listeners()
 
@@ -1596,10 +1613,10 @@ class MeshEditingMaster(Page):
 			o.flip_normals() # this does it by flipping the order of the vertices (and also the UVs!)
 		self.picoToolData.notify_update_render_listeners()
 
-	def round_vertices(self):
+	def round_vertices(self, value=.25):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for o in objs:
-			o.round_vertices(.25) # this does it by flipping the order of the vertices (and also the UVs!)
+			o.round_vertices(value)
 		self.picoToolData.notify_update_render_listeners()
 
 	def remove_invalid_faces(self):
@@ -2758,6 +2775,9 @@ class MainToolPage(Page):
 		self.reloadFile = make_button(self, text = "Reload File (Discard Changes)", command = self.reload_file_check_if_saved)
 		self.reloadFile.pack()
 
+		self.save_backup_button = make_button(self, text = "Log File", command = self.log_file)
+		self.save_backup_button.pack()
+
 		self.save_backup_button = make_button(self, text = "Save A Copy", command = self.save_backup_file)
 		self.save_backup_button.pack()
 
@@ -2854,6 +2874,16 @@ class MainToolPage(Page):
 		tk.messagebox.showinfo('Saved Backup','Saved the currently open data to "' + str(backup_filepath) +  '"')
 		# self.last_backup_saved.set(backup_filepath)
 
+	def log_file(self):
+		# save a copy of the current data!
+		if len(self.picoToolData.filename) == 0 or not self.picoToolData.is_valid_pico_save():
+			# self.last_backup_saved.set("(no file to backup! open a file!)")
+			print("Can't log your data if none is loaded! How did you get here without loading a file? Please tell Jordan")
+			return
+		# otherwise try to save a copy!
+		print(self.picoToolData.picoSave.output_save_text(self.picoToolData.picoSave.original_path))
+		# tk.messagebox.showinfo('Saved Backup','Saved the currently open data to "' + str(self.picoToolData.picoSave.original_path) +  '"')
+		# self.last_backup_saved.set(backup_filepath)
 
 	# def save_backup_file(self):
 	# 	# save a copy of the current file!
