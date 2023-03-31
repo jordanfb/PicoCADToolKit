@@ -26,6 +26,7 @@ from picoCADParser import * # my command line code!
 from picoCADDragAndDrop import * # my semi-useless code for windows tools XD
 
 from PIL import ImageTk,Image
+from decimal import *
 
 
 """
@@ -78,8 +79,8 @@ class PicoToolData:
 		self.selected_mesh_index = -1
 		self.render_origins = tk.IntVar() # 0 is no, 1 is yes
 		self.render_origins.set(1)
-		self.uv_border = .5
-		self.uv_padding = .5
+		self.uv_border = Decimal(.5)
+		self.uv_padding = Decimal(.5)
 
 		self.picoSaveChangeListeners = []
 		# for when the picoSave gets changed or the objects inside get changed!
@@ -124,7 +125,7 @@ class PicoToolData:
 			self.notify_selected_mesh_listeners()
 			self.notify_update_render_listeners()
 			return
-		print("Error: Tried to set invalid mesh index: " + str(mesh_or_negative_one))
+		print("Error: Tried to set invalid mesh index: " + str(mesh_or_negative_one), flush=True)
 
 	def reload_file(self):
 		self.set_filepath(self.filename)
@@ -205,7 +206,7 @@ class BigImagePage(Page):
 	def resize(self, event):
 		size = min(event.width, event.height)
 		img = self.load_image().resize(
-			(size, size), Image.ANTIALIAS
+			(size, size), Image.LANCZOS
 		)
 		# print("Resizing to", (event.width, event.height), "actually", size)
 		self.pico_axes_image = ImageTk.PhotoImage(img)
@@ -628,7 +629,7 @@ class ImageColorEditingPage(Page):
 			self.valid_image = True
 			self.update_selected_color_ui()
 		except Exception as e:
-			print("Error: "+ str(e))
+			print("Error: "+ str(e), flush=True)
 			# print("Error loading pico save!")
 			self.valid_image = False
 			self.selected_filepath_string_var.set("Load a valid png image file!")
@@ -657,7 +658,7 @@ class ImageColorEditingPage(Page):
 
 	def get_closest_color(self, c):
 		found_output = False
-		min_distance = float("inf")
+		min_distance = Decimal("inf")
 		out_color = (255, 255, 255)
 		for i in range(len(self.color_settings)):
 			setting = self.color_settings[i]
@@ -673,7 +674,7 @@ class ImageColorEditingPage(Page):
 		if not self.filename:
 			tk.messagebox.showinfo('Invalid Image','Please load a valid image before trying to output one!', icon = 'warning')
 			return
-		print("Converting Image. This may take a while...")
+		print("Converting Image. This may take a while...", flush=True)
 		output_img = Image.new("RGB", self.loaded_image_raw.size, (255,255,255))
 		# now go over the input image and convert it over!
 		for y in range(self.loaded_image_raw.height):
@@ -683,12 +684,12 @@ class ImageColorEditingPage(Page):
 				output_img.putpixel((x, y), p_c)
 		new_filename = get_associated_filename(self.filename, "_pico8_palette", ".png")
 		output_img.save(new_filename, "png")
-		print("Saved converted output to " + str(new_filename))
+		print("Saved converted output to " + str(new_filename), flush=True)
 		tk.messagebox.showinfo('Saved Converted Image','Saved converted image to "' + str(new_filename) +  '"')
 
 
 	def update_converted_image(self):
-		print("Converting Image. This may take a while...")
+		print("Converting Image. This may take a while...", flush=True)
 		# otherwise we have to go over the image and calculat what becomes what!
 		# use our float variables that we've set to figure things out!
 		# is there a more efficient way than updating the image constantly? probably yes.
@@ -701,7 +702,7 @@ class ImageColorEditingPage(Page):
 		self.tinted_image_tk_object = ImageTk.PhotoImage(self.tinted_image_resized)
 		self.image_canvas.itemconfig(self.tinted_image_id, image = self.tinted_image_tk_object)
 		self.output_image_dirty = False
-		print("Finished converting image")
+		print("Finished converting image", flush=True)
 		self.show_output_file_intvar.set(1) # show off the image!
 		self.update_showing_output_file()
 
@@ -742,7 +743,7 @@ class IntroPage(Page):
 		label.pack(side="top", fill="both", expand=False)
 
 		self.filename = "";
-		self.filepath_string_var = tk.StringVar(self.filename)
+		self.filepath_string_var = tk.StringVar(value=self.filename)
 
 		self.filepath_label = tk.Label(self, textvariable=self.filepath_string_var)
 		self.filepath_label.pack()
@@ -787,7 +788,7 @@ class IntroPage(Page):
 		# save a copy of the current file!
 		if len(self.filename) == 0 or not self.picoToolData.is_valid_pico_save():
 			self.last_backup_saved.set("(no file to backup! open a file!)")
-			print("Can't save your data if none is loaded!")
+			print("Can't save your data if none is loaded!", flush=True)
 			return
 		# otherwise try to save a copy!
 
@@ -993,7 +994,7 @@ class FileEditingMaster(Page):
 		label.pack(side="top", fill="both", expand=False)
 
 		self.filename = "";
-		self.filepath_string_var = tk.StringVar(self.filename)
+		self.filepath_string_var = tk.StringVar(value=self.filename)
 		self.picoSaveToCopyIn = None
 		self.valid_save = False
 
@@ -1030,10 +1031,10 @@ class FileEditingMaster(Page):
 
 	def copy_file_in_with_check(self):
 		if self.picoSaveToCopyIn == None or not self.valid_save:
-			print("Error: Can't copy in invalid save")
+			print("Error: Can't copy in invalid save", flush=True)
 			return # can't copy it in it's not valid!
 		if not self.picoToolData.is_valid_pico_save:
-			print("Error: I'm not sure how you got here but you need to open a valid save file for the tool to copy into")
+			print("Error: I'm not sure how you got here but you need to open a valid save file for the tool to copy into", flush=True)
 		# ask if they're sure with a messagebox. This can't be undone and can prevent picoCAD from opening it if the result is too large!
 		MsgBox = tk.messagebox.askquestion ('Are you sure you want to merge files?','Are you sure you want to merge these files? This will add ' + str(len(self.picoSaveToCopyIn.objects)) +' object(s) to your save. This tool can\'t undo it, and it can prevent picoCAD from opening your file if the result is too large. Please make a backup.',icon = 'warning')
 		if MsgBox == 'yes':
@@ -1045,7 +1046,7 @@ class FileEditingMaster(Page):
 				o.dirty = True
 			self.picoToolData.picoSave.objects += copied_objects # add the objects in!
 			self.picoToolData.picoSave.dirty = True # mark it VERY dirty
-			print("Copied " + str(len(copied_objects)) + " objects into your file!")
+			print("Copied " + str(len(copied_objects)) + " objects into your file!", flush=True)
 			self.picoToolData.notify_picoSave_listeners() # this very much counts as needing to update your picoSave display!
 			return
 		else:
@@ -1409,14 +1410,14 @@ class MeshEditingMaster(Page):
 		# rename the selected object, probably don't rename it if it's all things selected
 		objs = self.picoToolData.get_selected_mesh_objects()
 		if len(objs) != 1:
-			print("Can only rename one object at a time currently")
+			print("Can only rename one object at a time currently", flush=True)
 		else:
 			new_name = simpledialog.askstring(title="Rename " + str(objs[0].name), prompt="What's your new name for '" + str(objs[0].name) + "'?",
 																				initialvalue=str(objs[0].name))
 			if new_name == None:
 				pass # then they canceled the input and don't want to change the name
 			elif "'" in new_name:
-				print("Error: You can't have single quotes in the object name!")
+				print("Error: You can't have single quotes in the object name!", flush=True)
 			elif len(new_name) > 0 and objs[0].name != new_name:
 				objs[0].name = new_name
 				objs[0].dirty = True
@@ -1424,7 +1425,7 @@ class MeshEditingMaster(Page):
 				self.picoToolData.notify_picoSave_listeners()
 				self.picoToolData.notify_selected_mesh_listeners()
 			else:
-				print("Object name can't be empty")
+				print("Object name can't be empty", flush=True)
 
 	def triangulate_faces(self):
 		# triangulate the faces of the selected type!
@@ -1434,13 +1435,13 @@ class MeshEditingMaster(Page):
 			return # they aren't sure!
 		num_verts = int(self.triangulate_selection.float_value)
 		if num_verts != -1 and num_verts <= 3:
-			print("Can't triangulate faces with 3 or fewer vertices. Enter -1 to subdivide all faces")
+			print("Can't triangulate faces with 3 or fewer vertices. Enter -1 to subdivide all faces", flush=True)
 			return
 		objs = self.picoToolData.get_selected_mesh_objects()
 		changed = 0
 		for o in objs:
 			changed += o.triangulate_ngons(num_verts)
-		print("Triangulated " + str(changed) + " faces")
+		print("Triangulated " + str(changed) + " faces", flush=True)
 		self.picoToolData.notify_update_render_listeners()
 
 	def subdivide_into_fours(self):
@@ -1451,7 +1452,7 @@ class MeshEditingMaster(Page):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for o in objs:
 			o.subdivide_into_fours()
-		print("Subdivided selected objects")
+		print("Subdivided selected objects", flush=True)
 		self.picoToolData.notify_update_render_listeners()
 
 	def view_fullscreen_axes_image(self, e):
@@ -1511,7 +1512,7 @@ class MeshEditingMaster(Page):
 		objs = self.picoToolData.get_selected_mesh_objects()
 		for obj in objs:
 			obj_new = self.picoToolData.picoSave.duplicate_object(obj)
-			print("Duplicated object as: " + str(obj_new))
+			print("Duplicated object as: " + str(obj_new), flush=True)
 		# update the UI, object list changed!
 		self.picoToolData.notify_picoSave_listeners()
 
@@ -1519,7 +1520,7 @@ class MeshEditingMaster(Page):
 
 	def delete_mesh(self):
 		if self.picoToolData.selected_mesh_index == -1:
-			print("Error: Deleting all meshes isn't allowed! Choose a specific mesh to delete")
+			print("Error: Deleting all meshes isn't allowed! Choose a specific mesh to delete", flush=True)
 		else:
 			msg_box = tk.messagebox.askquestion(
 				'Are you sure?',
@@ -1539,7 +1540,7 @@ class MeshEditingMaster(Page):
 		z_radians = math.radians(self.z_rotate_entry.float_value)
 		print("Rotating mesh(es) by " + str(self.x_rotate_entry.float_value) + " degrees X, then " \
 					+ str(self.y_rotate_entry.float_value) + " degrees Y, then " \
-					+ str(self.z_rotate_entry.float_value) + " degrees Z")
+					+ str(self.z_rotate_entry.float_value) + " degrees Z", flush=True)
 		objs = self.picoToolData.get_selected_mesh_objects()
 		x_rot_mat = make_x_rotation_matrix(x_radians)
 		y_rot_mat = make_y_rotation_matrix(y_radians)
@@ -1564,9 +1565,9 @@ class MeshEditingMaster(Page):
 
 	def merge_mesh(self, delete_origin=True):
 		if self.picoToolData.selected_mesh_index == -1:
-			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into")
+			print("Error: Copying into all meshes isn't allowed! Choose a specific mesh to copy into", flush=True)
 		elif self.mesh_to_copy_from_dropdown.output_int == self.picoToolData.selected_mesh_index:
-			print("Error: Cannot copy to a mesh from itself! Choose a different mesh")
+			print("Error: Cannot copy to a mesh from itself! Choose a different mesh", flush=True)
 		else:
 			# copy it in!
 			objs = self.picoToolData.get_selected_mesh_objects()
@@ -1590,7 +1591,7 @@ class MeshEditingMaster(Page):
 		x = self.x_scale_entry.float_value
 		y = self.y_scale_entry.float_value
 		z = self.z_scale_entry.float_value
-		print("Scaling mesh(es) by " + str(x) + ", " + str(y) + ", " + str(z))
+		print("Scaling mesh(es) by " + str(x) + ", " + str(y) + ", " + str(z), flush=True)
 		for o in objs:
 			# scale the objects!
 			o.scale(x, y, z)
@@ -1601,7 +1602,7 @@ class MeshEditingMaster(Page):
 		x = self.x_scale_entry.float_value
 		y = self.y_scale_entry.float_value
 		z = self.z_scale_entry.float_value
-		print("Scaling mesh positions by " + str(x) + ", " + str(y) + ", " + str(z))
+		print("Scaling mesh positions by " + str(x) + ", " + str(y) + ", " + str(z), flush=True)
 		for o in objs:
 			# scale the objects!
 			o.scale_position(x, y, z)
@@ -1624,7 +1625,7 @@ class MeshEditingMaster(Page):
 		f = 0
 		for o in objs:
 			f += o.remove_invalid_faces()
-		print("Removed " + str(f) + " faces")
+		print("Removed " + str(f) + " faces", flush=True)
 		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
 
 	def fill_holes(self):
@@ -1632,7 +1633,7 @@ class MeshEditingMaster(Page):
 		f = 0
 		for o in objs:
 			f += o.fill_holes()
-		print("Filled " + str(f) + " holes")
+		print("Filled " + str(f) + " holes", flush=True)
 		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
 
 	def merge_overlapping_verts(self):
@@ -1644,7 +1645,7 @@ class MeshEditingMaster(Page):
 			v, f = o.merge_overlapping_vertices(self.merge_faces_distance_entry.float_value, self.destroy_hidden_faces_value.get() == 1)
 			removed += v
 			removed_faces += f
-		print("Removed " + str(removed) + " vertices and " + str(removed_faces) + " faces")
+		print("Removed " + str(removed) + " vertices and " + str(removed_faces) + " faces", flush=True)
 		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
 		self.picoToolData.notify_update_render_listeners()
 
@@ -1654,7 +1655,7 @@ class MeshEditingMaster(Page):
 		for o in objs:
 			v = o.remove_unused_vertices()
 			removed += v
-		print("Removed " + str(removed) + " vertices")
+		print("Removed " + str(removed) + " vertices", flush=True)
 		self.picoToolData.notify_picoSave_listeners() # because we've changed the mesh around!
 		self.picoToolData.notify_update_render_listeners()
 
@@ -1711,7 +1712,7 @@ class FloatEntry(tk.Entry):
 		tk.Entry.__init__(self, master, *args, **kwargs, textvariable = self.textvariable, validatecommand = self.valCommand, invalidcommand = self.invalCommand, validate = "all")
 		self.master = master
 		# self.uv_export_scalar = tk.Entry(subframe, validate="all", validatecommand=self.valCommand)
-		self.float_value = initial_value
+		self.float_value = Decimal(initial_value)
 		self.on_new_value_functions = [] # list of functions to pass in the new value to!
 		self.only_ints = False # so you can set that if you want to!
 		self.allow_negative = True
@@ -1735,7 +1736,7 @@ class FloatEntry(tk.Entry):
 
 	def float_validate(self, d, i, P, s, S, v, V, W):
 		try:
-			f = float(P)
+			f = Decimal(P)
 			if self.only_ints:
 				f = int(P) # then we gotta try making it an integer!
 			# update our float value!
@@ -1773,7 +1774,7 @@ class IntegerOutputOptionMenu(tk.OptionMenu):
 		self.master = master
 		self.on_new_value_functions = [] # for listeners!
 		if len(choices) == 0:
-			print("Error: Length of choices list is 0")
+			print("Error: Length of choices list is 0", flush=True)
 			# possibly should return but whatever
 		self.valid_choice = len(choices) > 0
 		self.build_choices_dictionary(choices)
@@ -1787,7 +1788,7 @@ class IntegerOutputOptionMenu(tk.OptionMenu):
 	def on_option_change(self, chosen):
 		self.chosen_option.set(chosen) # idk why it's not setting it itself? Perhaps this will work?
 		if self.chosen_option.get() not in self.choices_dictionary:
-			print("Error finding key " + str(self.chosen_option.get()))
+			print("Error finding key " + str(self.chosen_option.get()), flush=True)
 			return
 		i = self.choices_dictionary[self.chosen_option.get()]
 		self.output_int = i
@@ -1796,7 +1797,7 @@ class IntegerOutputOptionMenu(tk.OptionMenu):
 	def set_selection_index(self, new_int):
 		self.output_int = new_int
 		if self.output_int not in self.inverse_choices:
-			print("Error, tried to set output value that isn't in input dictionary: ", + str(self.output_int))
+			print("Error, tried to set output value that isn't in input dictionary: ", + str(self.output_int), flush=True)
 			return
 		self.chosen_option.set(self.inverse_choices[self.output_int])
 
@@ -2015,12 +2016,6 @@ class UVToolsPage(Page):
 				f.test_create_normals(scale = 1)
 		self.picoToolData.notify_update_render_listeners()
 
-	def round_uvs_to_quarter_unit(self):
-		for o in self.picoToolData.picoSave.objects:
-			for f in o.faces:
-				f.round_normals(nearest = .25)
-		self.picoToolData.notify_update_render_listeners()
-
 	def pack_naively(self):
 		padding = self.picoToolData.uv_padding
 		border = self.picoToolData.uv_border
@@ -2039,13 +2034,13 @@ class UVToolsPage(Page):
 		if len(P) == 0 or P == "." or P == "0." or P == "0":
 			return True
 		try:
-			f = float(P)
+			f = Decimal(P)
 			if f <= 0:
 				# print("negative")
 				return True# invalid!!!
 			elif f < 1:
 				# check to make sure it's a valid multiple of .125
-				print(f % .125)
+				print(f % .125, flush=True)
 				if f % .125 != 0:
 					# print("not multiple of 1/8")
 					return True# not a valid multiple of 1/8!
@@ -2197,7 +2192,7 @@ class FaceConversionFrame(tk.Frame):
 						f.set_all_uvs_to_coordinate(uv)
 						f.nottextured = False # convert it to textured! Huzzah!
 						num_faces_converted += 1
-		print("Converted " + str(num_faces_converted) + " face(s) to textured!")
+		print("Converted " + str(num_faces_converted) + " face(s) to textured!", flush=True)
 		if len(missing) > 0:
 			self.set_missing_colors_text(missing)
 		# now update the mesh display!
@@ -2205,13 +2200,13 @@ class FaceConversionFrame(tk.Frame):
 
 	def set_missing_colors_text(self, list_missing):
 		if len(list_missing) == 0:
-			print("No Missing Colors")
+			print("No Missing Colors", flush=True)
 			self.missing_colors_text_var.set("No Missing Colors")
 			return
 		s = ", ".join([str(x) for x in list_missing])
-		print("Missing (colors numbered 0-15): " + s)
+		print("Missing (colors numbered 0-15): " + s, flush=True)
 		rgb_colors = [str(colors[x]) for x in list_missing]
-		print("Missing RGB values:", ", ".join(rgb_colors))
+		print("Missing RGB values:", ", ".join(rgb_colors), flush=True)
 		self.missing_colors_text_var.set("Missing (colors numbered 0-15): " + s)
 
 	def display_missing_colors(self):
@@ -2223,7 +2218,7 @@ class FaceConversionFrame(tk.Frame):
 		# set the indices of the texture!
 		# This is the most questionable part of it... I guess I'm just editing the raw string? That's weird and iffy...
 		if len(missing) > 128:
-			print("Error adding colors: WAYYY too many missing colors. This shouldn't even be possible you're super impressive, but tell Jordan")
+			print("Error adding colors: WAYYY too many missing colors. This shouldn't even be possible you're super impressive, but tell Jordan", flush=True)
 			return
 		MsgBox = tk.messagebox.askquestion ('Edit Texture','Are you sure you want to edit the last (bottom right) ' + str(len(missing)) + ' pixels in your texture?',icon = 'warning')
 		if MsgBox != 'yes':
@@ -2235,7 +2230,7 @@ class FaceConversionFrame(tk.Frame):
 			x = 127-i
 			c = "0123456789abcdef"[missing[i]]
 			self.picoToolData.picoSave.set_texture_color((x, 119), c)
-		print("Added " + str(len(missing)) + " color(s)")
+		print("Added " + str(len(missing)) + " color(s)", flush=True)
 		self.picoToolData.notify_update_render_listeners()
 		self.find_texture_for_no_texture_faces()
 
@@ -2369,11 +2364,11 @@ class UVExportPage(Page):
 				f.test_create_normals(scale = 1)
 		self.picoToolData.notify_update_render_listeners()
 
-	def round_uvs_to_quarter_unit(self):
-		for o in self.picoToolData.picoSave.objects:
-			for f in o.faces:
-				f.round_normals(nearest = .25)
-		self.picoToolData.notify_update_render_listeners()
+	# def round_uvs_to_quarter_unit(self):
+	# 	for o in self.picoToolData.picoSave.objects:
+	# 		for f in o.faces:
+	# 			f.round_normals(nearest = .25)
+	# 	self.picoToolData.notify_update_render_listeners()
 
 	def pack_naively(self):
 		padding = self.picoToolData.uv_padding
@@ -2393,7 +2388,7 @@ class UVExportPage(Page):
 		if len(P) == 0 or P == "." or P == "0." or P == "0":
 			return True
 		try:
-			f = float(P)
+			f = Decimal(P)
 			if f <= 0:
 				# print("negative")
 				return True# invalid!!!
@@ -2529,8 +2524,13 @@ class UVUnwrappingPage(Page):
 		swap_uvs = make_button(self, text = "Swap All UVs", command = self.swap_uvs)
 		swap_uvs.pack()
 
-		round_uvs_to_quarter_unit = make_button(self, text = "Round UVs to nearest .25", command = self.round_uvs_to_quarter_unit)
-		round_uvs_to_quarter_unit.pack()
+
+		self.round_uvs_frame = tk.Frame(self)
+		self.round_uvs_frame.pack()
+		self.round_uvs_value = FloatEntry(self.round_uvs_frame, 0.25, width=5)
+		self.round_uvs_button = make_button(self.round_uvs_frame, text = "Round UVs To Nearest", command = lambda: self.round_uvs_to_nearest(self.round_uvs_value.float_value))
+		self.round_uvs_button.pack(side="left")
+		self.round_uvs_value.pack(side="left")
 
 		clamp_uvs_to_screen_button = make_button(self, text = "Clamp UVs to Screen", command = self.clamp_uvs_to_screen)
 		clamp_uvs_to_screen_button.pack()
@@ -2648,10 +2648,16 @@ class UVUnwrappingPage(Page):
 				f.clampUVs()
 		self.picoToolData.notify_update_render_listeners()
 
-	def round_uvs_to_quarter_unit(self):
+	# def round_uvs_to_quarter_unit(self):
+	# 	for o in self.picoToolData.picoSave.objects:
+	# 		for f in o.faces:
+	# 			f.round_normals(nearest = .25)
+	# 	self.picoToolData.notify_update_render_listeners()
+
+	def round_uvs_to_nearest(self, value=.25):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
-				f.round_normals(nearest = .25)
+				f.round_normals(nearest = value)
 		self.picoToolData.notify_update_render_listeners()
 
 	def pack_naively(self):
@@ -2672,7 +2678,7 @@ class UVUnwrappingPage(Page):
 		if len(P) == 0 or P == "." or P == "0." or P == "0":
 			return True
 		try:
-			f = float(P)
+			f = Decimal(P)
 			if f <= 0:
 				# print("negative")
 				return True# invalid!!!
@@ -2865,7 +2871,7 @@ class MainToolPage(Page):
 		# save a copy of the current data!
 		if len(self.picoToolData.filename) == 0 or not self.picoToolData.is_valid_pico_save():
 			# self.last_backup_saved.set("(no file to backup! open a file!)")
-			print("Can't save your data if none is loaded! How did you get here without loading a file? Please tell Jordan")
+			print("Can't save your data if none is loaded! How did you get here without loading a file? Please tell Jordan", flush=True)
 			return
 		# otherwise try to save a copy!
 
@@ -2878,10 +2884,10 @@ class MainToolPage(Page):
 		# save a copy of the current data!
 		if len(self.picoToolData.filename) == 0 or not self.picoToolData.is_valid_pico_save():
 			# self.last_backup_saved.set("(no file to backup! open a file!)")
-			print("Can't log your data if none is loaded! How did you get here without loading a file? Please tell Jordan")
+			print("Can't log your data if none is loaded! How did you get here without loading a file? Please tell Jordan", flush=True)
 			return
 		# otherwise try to save a copy!
-		print(self.picoToolData.picoSave.output_save_text(self.picoToolData.picoSave.original_path))
+		print(self.picoToolData.picoSave.output_save_text(self.picoToolData.picoSave.original_path), flush=True)
 		# tk.messagebox.showinfo('Saved Backup','Saved the currently open data to "' + str(self.picoToolData.picoSave.original_path) +  '"')
 		# self.last_backup_saved.set(backup_filepath)
 

@@ -84,7 +84,7 @@ def make_128_pico_palatte():
 
 def limit_sigfigs(value, sigfigs):
 	s = '{0:0.{prec}g}'.format(value, prec=sigfigs)
-	return float(s)
+	return Decimal(s)
 
 def normalize_fraction(d):
     normalized = d.normalize()
@@ -965,12 +965,12 @@ class PicoObject:
 		# parse pos
 		postext = get_sub_table(obj_text, "pos=")[0]
 		postext = postext[1:-1] # cut off the {}
-		self.pos = SimpleVector([float(s) for s in postext.split(',')])
+		self.pos = SimpleVector([Decimal(s) for s in postext.split(',')])
 
 		# parse rot
 		rottext = get_sub_table(obj_text, "rot=")[0]
 		rottext = rottext[1:-1] # cut off the {}
-		self.rot = SimpleVector([float(s) for s in rottext.split(',')])
+		self.rot = SimpleVector([Decimal(s) for s in rottext.split(',')])
 
 	def parse_vertices(self, obj_text):
 		verticestext = get_sub_table(obj_text, "v={")
@@ -978,7 +978,7 @@ class PicoObject:
 		for vtext in verticestext:
 			trimmed = trim_front_until(vtext)
 			coords = trimmed[1:-1].split(",")
-			vertices += [SimpleVector([float(s) for s in coords])]
+			vertices += [SimpleVector([Decimal(s) for s in coords])]
 		self.vertices = vertices
 
 	def parse_faces(self, obj_text):
@@ -988,7 +988,7 @@ class PicoObject:
 			trimmed = trim_front_until(ftext)
 			# print(trimmed)
 			uvs = get_sub_table(trimmed, "uv=")[0][1:-1].split(",")
-			uvs = [float(x) for x in uvs]
+			uvs = [Decimal(x) for x in uvs]
 			uvs_out = []
 			for i in range(0, len(uvs), 2):
 				uvs_out += [SimpleVector([uvs[i], uvs[i+1]])]
@@ -1000,7 +1000,7 @@ class PicoObject:
 			# trimmed = [x for x in trimmed if "=" not in x] # get rid of the uvs and the face settings and colors and whatever
 			# print(trimmed)
 			# coords = trimmed[1:-1].split(",")
-			# faces += [[float(s) for s in coords]]
+			# faces += [[Decimal(s) for s in coords]]
 			trimmed = get_this_level_table(trimmed)
 			vertices = [int(x) for x in trimmed.split(',') if "=" not in x]
 
@@ -1168,7 +1168,7 @@ class PicoSave:
 
 		# now we have all the faces. Let's sort them by dimensions or something? Do I bother sorting them by size? Probably not!
 		finished_faces = []
-		max_coords = SimpleVector(128/8, 128/8, 0)
+		max_coords = SimpleVector(Decimal(128)/8, Decimal(128)/8, 0)
 		row_height = 0
 		num_on_row = 0
 		coords = SimpleVector(border, border, 0)
@@ -1385,7 +1385,7 @@ class SimpleVector:
 			self.z = Decimal(z)
 
 	def magnitude(self):
-		return math.sqrt(self.x*self.x + self.y*self.y + self.z*self.z)
+		return (self.x*self.x + self.y*self.y + self.z*self.z).sqrt()
 
 	def copy(self):
 		return SimpleVector(self.x, self.y, self.z)
@@ -1453,8 +1453,8 @@ class SimpleVector:
 
 	def round_to_nearest(self, nearest):
 		# annoyingly sometimes floating point imprecision leaves horrible miniscule values.
-		nearest_str = repr(float(nearest))
 		nearest = Decimal(nearest)
+		nearest_str = repr(nearest)
 		if "." in nearest_str:
 			# then we have a float! Let's try making the sigfigs real as well.
 			sigfigs = len(nearest_str.split(".")[1])
@@ -1573,29 +1573,29 @@ def make_identity_matrix():
 	return output
 
 def make_scale_matrix(scale):
-	output = [[scale,0,0,0], [0,scale,0,0], [0,0,scale,0], [0,0,0,1]]
+	output = [[Decimal(scale),0,0,0], [0,Decimal(scale),0,0], [0,0,Decimal(scale),0], [0,0,0,1]]
 	return output
 
 def make_offset_matrix(delt_pos):
-	output = [[1,0,0,delt_pos[0]], [0,1,0,delt_pos[1]], [0,0,1,delt_pos[2]], [0,0,0,1]]
+	output = [[1,0,0,Decimal(delt_pos[0])], [0,1,0,Decimal(delt_pos[1])], [0,0,1,Decimal(delt_pos[2])], [0,0,0,1]]
 	return output
 
 def make_x_rotation_matrix(x_radians):
 	cos = math.cos(x_radians)
 	sin = math.sin(x_radians)
-	output = [[1, 0, 0, 0], [0, cos, -sin, 0], [0, sin, cos, 0], [0, 0, 0, 1]]
+	output = [[1, 0, 0, 0], [0, Decimal(cos), Decimal(-sin), 0], [0, Decimal(sin), Decimal(cos), 0], [0, 0, 0, 1]]
 	return output
 
 def make_y_rotation_matrix(y_radians):
 	cos = math.cos(y_radians)
 	sin = math.sin(y_radians)
-	output = [[cos, 0, sin, 0], [0, 1, 0, 0], [-sin, 0, cos, 0], [0, 0, 0, 1]]
+	output = [[Decimal(cos), 0, Decimal(sin), 0], [0, 1, 0, 0], [Decimal(-sin), 0, Decimal(cos), 0], [0, 0, 0, 1]]
 	return output
 
 def make_z_rotation_matrix(z_radians):
 	cos = math.cos(z_radians)
 	sin = math.sin(z_radians)
-	output = [[cos, -sin, 0, 0], [sin, cos, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+	output = [[Decimal(cos), Decimal(-sin), 0, 0], [Decimal(sin), Decimal(cos), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
 	return output
 
 def load_picoCAD_save(filepath):
