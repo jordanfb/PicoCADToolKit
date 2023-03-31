@@ -103,10 +103,11 @@ detail on it.
 3) The "Naive UV Unwrwap Model" button. Press this button and it will unwrap
 whichever mesh(es) are selected at whatever scale is entered!
 4) "Swap All UVs" This will switch the U and V values of every mesh.
-5) "Round UVs to nearest .25" PicoCAD rounds the UV coordinates to the nearest .25
+5) "Round UVs to nearest X" PicoCAD rounds the UV coordinates to the nearest .25
 value, this tool is capable of more precision. If you intend to move the UVs around
 in PicoCAD though it'll round the positions, so it may be worth rounding it here
-beforehand.
+beforehand. You can specify what value to round to the nearest multiple of next to the
+button.
 6) "Clamp UVs to Screen" Sometimes a face's UVs will end up off the screen for
 whatever reason. Pressing this will move any offscreen vertices onto the edge of
 the screen. If the entire face is off screen it will be a flat line on the edge, but
@@ -233,17 +234,17 @@ It will first rotate around the x axis, then the y axis, then the z axis, not al
 mind when deciding how to rotate it!
 Also keep in mind the fact that rotating the mesh can make the file size expand as you move vertices
 from nice round numbers like (5.25) to (5.123123141 etc.). If you want to reduce the file size you can
-click the "Round vertices to nearest .25" lower down on this page which will round each vertex position
-to the nearest 0, .25, .5, or .75 along all three axes.
+click the "Round vertices to nearest X" lower down on this page which will round each vertex position
+to a multiple of the value specified along all three axes.
 
 3) If you flip the mesh (i.e. scale any number of dimensions by -1) this will also flip the normals inside
 out! Not to worry, you can use this "Flip Mesh Normals" button to flip them back again. Or, if you want
 your mesh to appear inside out you can use this button to achieve that!
 
-4) "Round vertices to nearest .25"
+4) "Round vertices to nearest X"
 If you are moving vertices around with scaling or other tools you may find that the vertices aren't precisely
 on the snapping points in picoCAD! If you want them to be, click this button and it will round each vertex
-position to the nearest .25 unit in every dimension.
+position to the nearest multiple of the value specified in the textbox in every dimension.
 
 5) "Duplicate Mesh" will duplicate the currently selected mesh and append `_dup` to the name of the copy!
 
@@ -401,8 +402,9 @@ to uniformly scale it up this is a good option to you! It will average the posit
 move the origin to that location.
 4) "Move Origin to <0,0,0> World Coordinates" If you want to align the origin with the world coordinates
 click this button and then manually move it to where you want it to be!
-5) "Round Origin to Nearest .25" If you want your origin to align to the snapping grid of picoCAD press
-this button and it will align it to the nearest location without moving your vertices.
+5) "Round Origin to Nearest X" If you want your origin to align to the snapping grid of picoCAD press
+this button and it will align it to the nearest multiple of the value in the textbox without moving
+your vertices.
 
 And finally there's a back button to return to the main tool menu!
 
