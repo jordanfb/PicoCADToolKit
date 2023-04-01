@@ -24,4 +24,4 @@ call(["python", "waf", "all"], cwd=os.path.join(subfolder_name, "bootloader"))
 
 # now install it
 print("Installing PyInstaller")
-call(["python", "setup.py", "install"], cwd=subfolder_name)
+call(["pip", "install", "."], cwd=subfolder_name)
