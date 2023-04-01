@@ -86,9 +86,9 @@ jobs:
       with:
         python-version: 3.11
     - name: Install dependencies
-            # python -m pip install --upgrade pip # this was the first command but it was erroring on Windows
-      run: |
-        pip install -r build_requirements.txt
+      run: pip install pillow
+    - name: Build PyInstaller
+      run: python3 .github/workflows/download_build_pyinstaller.py
     - name: Build with pyinstaller for ${{matrix.TARGET}}
       run: ${{matrix.CMD_BUILD}}
     - name: Load Release URL File from release job
