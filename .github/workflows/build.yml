@@ -86,7 +86,7 @@ jobs:
       with:
         python-version: 3.11
     - name: Install dependencies
-      run: pip install pillow
+      run: pip install pillow wheel
     - name: Build PyInstaller
       run: python3 .github/workflows/download_build_pyinstaller.py
     - name: Build with pyinstaller for ${{matrix.TARGET}}
