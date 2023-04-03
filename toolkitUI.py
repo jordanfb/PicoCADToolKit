@@ -829,6 +829,9 @@ class DebugToolsPage(Page):
 		self.mark_dirty_button = make_button(self, text = "Temp Mark Dirty", command = self.mark_save_dirty)
 		self.mark_dirty_button.pack()
 
+		self.save_backup_button = make_button(self, text = "Log File", command = self.log_file)
+		self.save_backup_button.pack()
+
 		if windows_tools_enabled:
 			self.open_in_picoCAD = make_button(self, text = "Open File In picoCAD", command = self.test_open_in_picoCAD)
 			self.open_in_picoCAD.pack()
@@ -836,6 +839,17 @@ class DebugToolsPage(Page):
 		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 		self.master = master
+
+	def log_file(self):
+		# save a copy of the current data!
+		if len(self.picoToolData.filename) == 0 or not self.picoToolData.is_valid_pico_save():
+			# self.last_backup_saved.set("(no file to backup! open a file!)")
+			print("Can't log your data if none is loaded! How did you get here without loading a file? Please tell Jordan", flush=True)
+			return
+		# otherwise try to save a copy!
+		print(self.picoToolData.picoSave.output_save_text(self.picoToolData.picoSave.original_path), flush=True)
+		# tk.messagebox.showinfo('Saved Backup','Saved the currently open data to "' + str(self.picoToolData.picoSave.original_path) +  '"')
+		# self.last_backup_saved.set(backup_filepath)
 
 	def return_to_tools_page(self):
 		self.show_page(self.mainView.tool_page)
@@ -2781,9 +2795,6 @@ class MainToolPage(Page):
 		self.reloadFile = make_button(self, text = "Reload File (Discard Changes)", command = self.reload_file_check_if_saved)
 		self.reloadFile.pack()
 
-		self.save_backup_button = make_button(self, text = "Log File", command = self.log_file)
-		self.save_backup_button.pack()
-
 		self.save_backup_button = make_button(self, text = "Save A Copy", command = self.save_backup_file)
 		self.save_backup_button.pack()
 
@@ -2880,16 +2891,6 @@ class MainToolPage(Page):
 		tk.messagebox.showinfo('Saved Backup','Saved the currently open data to "' + str(backup_filepath) +  '"')
 		# self.last_backup_saved.set(backup_filepath)
 
-	def log_file(self):
-		# save a copy of the current data!
-		if len(self.picoToolData.filename) == 0 or not self.picoToolData.is_valid_pico_save():
-			# self.last_backup_saved.set("(no file to backup! open a file!)")
-			print("Can't log your data if none is loaded! How did you get here without loading a file? Please tell Jordan", flush=True)
-			return
-		# otherwise try to save a copy!
-		print(self.picoToolData.picoSave.output_save_text(self.picoToolData.picoSave.original_path), flush=True)
-		# tk.messagebox.showinfo('Saved Backup','Saved the currently open data to "' + str(self.picoToolData.picoSave.original_path) +  '"')
-		# self.last_backup_saved.set(backup_filepath)
 
 	# def save_backup_file(self):
 	# 	# save a copy of the current file!
