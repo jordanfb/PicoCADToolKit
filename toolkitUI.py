@@ -516,6 +516,7 @@ class ImageColorEditingPage(Page):
 		self.image_canvas = tk.Canvas(self.image_canvas_frame, width = self.canvas_size[0], height = self.canvas_size[1])
 		self.image_canvas.pack()
 		self.loaded_image_raw = self.load_example_image()
+		self.loaded_image_raw = self.loaded_image_raw.convert('RGB')
 		
 		# resize it to fit on the canvas
 		self.loaded_image_resized = self.loaded_image_raw.resize(self.canvas_size, Image.NEAREST)
@@ -614,6 +615,7 @@ class ImageColorEditingPage(Page):
 			# see if pillow can load it, if yes, then we're solid!
 			img = Image.open(self.filename)
 			self.loaded_image_raw = img
+			self.loaded_image_raw = self.loaded_image_raw.convert('RGB') # convert it from indexed or whatever else to rgb mode!
 
 			self.loaded_image_resized = self.loaded_image_raw.resize(self.canvas_size, Image.NEAREST)
 			self.loaded_image_tk_object = ImageTk.PhotoImage(self.loaded_image_resized)
@@ -654,7 +656,7 @@ class ImageColorEditingPage(Page):
 			db = 0
 		else:
 			db /= color_settings[3]
-		return math.sqrt(dr*dr + dg*dg + db*db) / color_settings[0]
+		return math.sqrt(float(dr*dr) + float(dg*dg) + float(db*db)) / color_settings[0]
 
 	def get_closest_color(self, c):
 		found_output = False
