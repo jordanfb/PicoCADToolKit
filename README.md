@@ -142,6 +142,11 @@ colors
 - Implemented rounding to any value (hopefully correctly trimming the significant figures as well)
 - Updated the version of tkinter to support python 3.11 for improved compatibility
 
+## v0.8.1 Color Palette Conversion Hotfix
+
+- Fixed color palette conversion color weights
+- Add support for loading pngs that aren't using the standard RGB format (for instance indexed).
+
 # Thanks:
 
 Thanks so much to Johan Peitz [Twitter: @johanpeitz](https://twitter.com/johanpeitz) for making picoCAD and inspiring this project!

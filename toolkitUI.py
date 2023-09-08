@@ -656,7 +656,7 @@ class ImageColorEditingPage(Page):
 			db = 0
 		else:
 			db /= color_settings[3]
-		return math.sqrt(float(dr*dr) + float(dg*dg) + float(db*db)) / color_settings[0]
+		return math.sqrt(float(dr*dr) + float(dg*dg) + float(db*db)) / float(color_settings[0])
 
 	def get_closest_color(self, c):
 		found_output = False
