@@ -11,8 +11,8 @@ import zipfile
 import os
 from subprocess import call
 
-src_zip_url = "https://github.com/pyinstaller/pyinstaller/archive/refs/tags/v5.9.0.zip"
-subfolder_name = "pyinstaller-5.9.0" # the folder that will be unzipped from the download!
+src_zip_url = "https://github.com/pyinstaller/pyinstaller/archive/refs/tags/v5.13.0.zip"
+subfolder_name = "pyinstaller-5.13.0" # the folder that will be unzipped from the download!
 
 filehandle, _ = requests.urlretrieve(src_zip_url)
 with zipfile.ZipFile(filehandle, 'r') as zf:
