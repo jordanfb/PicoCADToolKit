@@ -348,7 +348,7 @@ class MeshDisplayCanvas(tk.Canvas):
 					# draw the line!
 					v1 = transformed_vertices[f.vertices[i]]
 					v2 = transformed_vertices[f.vertices[(i+1) % len(f.vertices)]]
-					# print("Creating line:", v1, " to ", v2)
+					# print("Creating line:", v1, " to ", v2, "at index", i, flush=True)
 					line = self.create_line(v1.x, v1.y, v2.x, v2.y, fill=color)
 			if self.picoToolData.render_origins.get() == 1:
 				# draw the origin in red!
@@ -374,7 +374,7 @@ class MeshDisplayCanvas(tk.Canvas):
 					# draw the line!
 					v1 = transformed_uvs[i]
 					v2 = transformed_uvs[(i+1) % len(f.vertices)]
-					# print("Creating line:", v1, " to ", v2)
+					# print("Creating line:", v1, " to ", v2, "at index", i, flush=True)
 					line = self.create_line(v1.x, v1.y, v2.x, v2.y, fill=color)
 		corners = [SimpleVector(0, 0, 0), SimpleVector(128/8, 0, 0), SimpleVector(128/8, 120/8, 0), SimpleVector(0, 120/8, 0)]
 		corners = [x.mat_mult(self.view_matrix) for x in corners]

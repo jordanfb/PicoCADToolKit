@@ -179,7 +179,7 @@ class PicoFace:
 		# otherwise idk we'll figure it out :P
 		normal = self.get_normal()
 		if normal.magnitude() == 0:
-			print("Couldn't find normal for face") # thus it's probably nothing? IDK how to handle this...
+			print("Couldn't find normal for face", normal, flush=True) # thus it's probably nothing? IDK how to handle this...
 			normal = SimpleVector(1, 0, 0)
 		normal = normal.normalize()
 		# possible_basis = [[1, 0, 0], [0, 0, 1], [0, 1, 0]]
@@ -293,8 +293,8 @@ class PicoFace:
 		# print("prjoected", projected_len, vertex_len)
 		if projected_len == 0:
 			# this is mainly if you have faces that are entirely invisible
-			projected_len = 1
-			vertex_len = 0
+			projected_len = Decimal(1)
+			vertex_len = Decimal(0)
 		multiplier = scalar * (vertex_len / projected_len)
 		# now scale up all the points by that?
 		# I guess that works?
@@ -337,23 +337,50 @@ class PicoFace:
 		# figure out the normal assuming it's planar!
 		# for now just assume it's clockwise IDK?
 		if (len(self.vertices) < 3):
-			print("ERROR THERE AREN'T ENOUGH VERTICES OOPS")
-			return SimpleVector(1, 0, 0)
+			print(f"Warning: There aren't enough vertices ({len(self.vertices)}) to calculate a normal for unwrapping. Defaulting to a non-colinear direction")
+			if len(self.vertices) <= 1:
+				# just do whatever
+				return SimpleVector(1, 0, 0)
+			else:
+				# we have two. Find something not in line with them so it's not condensed into a single point
+				delta = self.get_vertex_value(0) - self.get_vertex_value(1)
+				if delta[1] == 0 and delta[2] == 0:
+					# then we're in line with SimpleVector(1, 0, 0) so we should change it!
+					return SimpleVector(0, 1, 0)
+				return SimpleVector(1, 0, 0)
 		# need to loop over all the vertices to find three that are unique!
 		vertices = []
 		for i in range(len(self.vertices)):
 			loc = self.get_vertex_value(i)
 			if loc not in vertices:
 				vertices.append(loc)
-				if len(vertices) == 3:
+				if len(vertices) >= 3:
+					# see if we can find some non-colinear combination of them.
 					# calculate it!
 					# a = self.get_vertex_value(vertices[0]) - self.get_vertex_value(vertices[1])
 					# b = self.get_vertex_value(vertices[2]) - self.get_vertex_value(vertices[1])
 					a = vertices[0] - vertices[1]
-					b = vertices[2] - vertices[1]
-					return b.cross(a) # I guess???? Is this right????? Hmmmmm?????
-		print("ERROR THERE AREN'T ENOUGH UNIQUE VERTICES OOPS")
-		return SimpleVector(1,0,0)
+					for j in range(2, len(vertices)):
+						# try all the remaining vertices to see if we can find a non-colinear one.
+						b = vertices[j] - vertices[1]
+						c = b.cross(a)
+						if c.magnitude() != 0:
+							# we found a valid normal!
+							return c
+					# otherwise everything was colinear so we should keep looking for more vertices
+		print(f"Warning: There aren't enough non-colinear vertices to calculate the face normal ({len(vertices)}). Defaulting to a non-colinear direction")
+		if len(vertices) <= 1:
+			# just pick whatever
+			return SimpleVector(1,0,0)
+		else:
+			# possible we have more than two vertices but they're all colinear
+			# but just find something that's not in line with them.
+			delta = vertices[0] - vertices[1]
+			if delta[1] == 0 and delta[2] == 0:
+				# then we're in line with SimpleVector(1, 0, 0) so we should change it!
+				return SimpleVector(0, 1, 0)
+			return SimpleVector(1, 0, 0)
+
 
 	def is_coplanar(self):
 		# figure out if you're coplanar!
@@ -1405,7 +1432,7 @@ class SimpleVector:
 			self.z = Decimal(z)
 
 	def magnitude(self):
-		return (self.x*self.x + self.y*self.y + self.z*self.z).sqrt()
+		return Decimal((self.x*self.x + self.y*self.y + self.z*self.z).sqrt())
 
 	def copy(self):
 		return SimpleVector(self.x, self.y, self.z)
