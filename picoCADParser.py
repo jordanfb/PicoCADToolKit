@@ -253,12 +253,32 @@ class PicoFace:
 		# print(centered_points)
 		# # need to round them to the nearest points!
 
-	def flip_UVs(self):
+	def swap_uvs(self):
 		# flip the uv coords!
 		for i in range(len(self.uvs)):
 			temp = self.uvs[i].x
 			self.uvs[i].x = self.uvs[i].y
 			self.uvs[i].y = temp
+		self.dirty = True
+
+	def flip_uvs_h(self):
+		# flip the uv coords horizontally!
+		for i in range(len(self.uvs)):
+			self.uvs[i].x = 16-self.uvs[i].x
+		self.dirty = True
+
+	def flip_uvs_v(self):
+		# flip the uv coords vertically!
+		for i in range(len(self.uvs)):
+			self.uvs[i].y = 15-self.uvs[i].y # vertically we only go to 15
+		self.dirty = True
+
+	def minimize_uv_size(self):
+		# reduce file size by setting UVs to a 0-1 square
+		coords = [[0, 0], [0, 1], [1, 1], [1, 0]]
+		for i in range(len(self.uvs)):
+			self.uvs[i].x = coords[i%len(coords)][0]
+			self.uvs[i].y = coords[i%len(coords)][1]
 		self.dirty = True
 
 	def get_scaled_projected_points_to_distance(self, scalar = 1, basis_forgiveness = 0):
@@ -297,7 +317,7 @@ class PicoFace:
 		# print("")
 		self.uvs = scaled
 		if flip_uvs:
-			self.flip_UVs() # by default flip the uvs!
+			self.swap_uvs() # by default flip the uvs!
 		self.dirty = True
 
 	def round_normals(self, nearest = .25):

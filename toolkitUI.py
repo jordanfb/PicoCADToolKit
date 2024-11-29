@@ -2022,7 +2022,7 @@ class UVToolsPage(Page):
 	def swap_uvs(self):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
-				f.flip_UVs()
+				f.swap_uvs()
 		self.picoToolData.notify_update_render_listeners()
 
 	def unwrap_model(self):
@@ -2370,7 +2370,7 @@ class UVExportPage(Page):
 	def swap_uvs(self):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
-				f.flip_UVs()
+				f.swap_uvs()
 		self.picoToolData.notify_update_render_listeners()
 
 	def unwrap_model(self):
@@ -2540,6 +2540,16 @@ class UVUnwrappingPage(Page):
 		swap_uvs = make_button(self, text = "Swap All UVs", command = self.swap_uvs)
 		swap_uvs.pack()
 
+		flip_uvs_h = make_button(self, text = "Flip UVs Horizontally", command = self.flip_uvs_h)
+		flip_uvs_h.pack()
+
+		flip_uvs_v = make_button(self, text = "Flip UVs Vertically", command = self.flip_uvs_v)
+		flip_uvs_v.pack()
+
+		minimize_uv_size = make_button(self, text = "Minimize UV Size", command = self.minimize_uv_size)
+		minimize_uv_size.pack()
+
+
 
 		self.round_uvs_frame = tk.Frame(self)
 		self.round_uvs_frame.pack()
@@ -2621,8 +2631,27 @@ class UVUnwrappingPage(Page):
 	def swap_uvs(self):
 		for o in self.picoToolData.picoSave.objects:
 			for f in o.faces:
-				f.flip_UVs()
+				f.swap_uvs()
 		self.picoToolData.notify_update_render_listeners()
+
+	def flip_uvs_h(self):
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.flip_uvs_h()
+		self.picoToolData.notify_update_render_listeners()
+
+	def flip_uvs_v(self):
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.flip_uvs_v()
+		self.picoToolData.notify_update_render_listeners()
+
+	def minimize_uv_size(self):
+		for o in self.picoToolData.picoSave.objects:
+			for f in o.faces:
+				f.minimize_uv_size()
+		self.picoToolData.notify_update_render_listeners()
+
 
 	def unwrap_model(self):
 		# unwrap the model's faces!
