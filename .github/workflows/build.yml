@@ -44,7 +44,7 @@ jobs:
       run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
     - name: Save Release URL File for publish
       if: always() # always run because if it failed to find a release it'll make one!
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: release_url
         path: release_url.txt
