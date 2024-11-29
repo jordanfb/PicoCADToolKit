@@ -102,17 +102,24 @@ the uv texture! If you have a character try scaling it up so you can get more
 detail on it.
 3) The "Naive UV Unwrwap Model" button. Press this button and it will unwrap
 whichever mesh(es) are selected at whatever scale is entered!
-4) "Swap All UVs" This will switch the U and V values of every mesh.
-5) "Round UVs to nearest X" PicoCAD rounds the UV coordinates to the nearest .25
+4) "Swap UVs" This will switch the U and V values of selected meshes.
+5) "Flip UVs Horizontally" will flip UVs across the X axis (setting each UV coordinate to 16-x)
+6) "Flip UVs Vertically" will flip UVs across the Y axis (setting each UV coordinate to 15-x
+since there is less space in the Y dimension)
+7) "Minimize UV Size" will set the UV coordinates of the selected object's faces to
+the square at (0, 0), (0, 1), (1, 1), (1, 0), eventually overlapping if the face has
+more than 4 vertices. This is helpful to reduce file size for objects that are using face
+coloring.
+8) "Round UVs to nearest X" PicoCAD rounds the UV coordinates to the nearest .25
 value, this tool is capable of more precision. If you intend to move the UVs around
 in PicoCAD though it'll round the positions, so it may be worth rounding it here
 beforehand. You can specify what value to round to the nearest multiple of next to the
 button.
-6) "Clamp UVs to Screen" Sometimes a face's UVs will end up off the screen for
+9) "Clamp UVs to Screen" Sometimes a face's UVs will end up off the screen for
 whatever reason. Pressing this will move any offscreen vertices onto the edge of
 the screen. If the entire face is off screen it will be a flat line on the edge, but
 you can manually reach them and move the UV coordinates to their correct position.
-7) "Show UVs" This button will open up your default image viewer and show a 128x128
+10) "Show UVs" This button will open up your default image viewer and show a 128x128
 pixel image that has all the current UV maps on it!
 
 
@@ -133,6 +140,9 @@ are listed above!
 4) There are then buttons to manually pack the UVs with one of the two methods
 5) "Show UVs" This button will open up your default image viewer and show a 128x128
 pixel image that has all the current UV maps on it!
+6) Next is an entry box to change the selected mesh.
+7) "Shift UVs" will modify the UV coordinates of the selected mesh(es) by the values
+in the input boxes to the left.
 
 #### Properties:
 This page is full of actions relating to the face properties of the selected mesh(es)!

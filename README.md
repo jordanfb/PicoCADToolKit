@@ -147,6 +147,16 @@ colors
 - Fixed color palette conversion color weights
 - Add support for loading pngs that aren't using the standard RGB format (for instance indexed).
 
+## v0.9.0
+
+- Resolved a number of issues including:
+	- fixed UV unwrapping faces
+	- improved math for unwrapping faces with two vertices
+	- made most of the UV editing tools apply only to selected objects
+- added UV shift tool to adjust the position of UVs of an object
+- added horizontal and vertical UV flip
+- added tool to minimize UV file size if the object is using face colors
+
 # Thanks:
 
 Thanks so much to Johan Peitz [Twitter: @johanpeitz](https://twitter.com/johanpeitz) for making picoCAD and inspiring this project!
