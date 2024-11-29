@@ -1968,40 +1968,37 @@ class UVToolsPage(Page):
 		self.show_uvs = make_button(self, text = "Show UVs", command = self.show_uv_map)
 		self.show_uvs.pack()
 
-		# label = tk.Label(self, text="\nExport:") # to space things out!
-		# label.pack(side="top", fill="both", expand=False)
 
-		# label = tk.Label(self, text="UV Export Scale: (multiples of .125 below 1, or powers of 2):")
-		# label.pack(side="top", fill="both", expand=False)
+		# now let's put the nudging UV stuff here
 
-		# valCommand = (master.register(self.validate_export_scalar),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-		
-		# subframe = tk.Frame(self) # to align horizontally
-		# self.uv_export_scalar = tk.Entry(subframe, validate="all", validatecommand=valCommand)
-		# self.uv_export_scalar.pack(side="left")
-		# self.valid_entry_label = tk.StringVar()
-		# self.valid_entry_label.set("Invalid Scale")
-		# label = tk.Label(subframe, textvariable=self.valid_entry_label)
-		# label.pack(side="right", fill="both", expand=False)
-		# subframe.pack(side="top")
+		# select which index model to nudge!
+		label = tk.Label(self, text="Mesh Object To Shift UVs of:")
+		label.pack(side="top", fill="both", expand=False)
 
-		# self.uv_export_button_stringvar = tk.StringVar()
-		# self.uv_export_button_stringvar.set("Export Current UVs as PNG (scale = " + str(self.uv_map_scale) + ")")
-		# self.export_uvs = make_button(self, textvariable = self.uv_export_button_stringvar, command = self.export_uv_map)
-		# self.export_uvs.pack()
-
-		# label = tk.Label(self, text="") # to space things out!
-		# label.pack(side="top", fill="both", expand=False)
+		# now let them choose which mesh they're editing!
+		self.mesh_to_nudge_entry = IntegerOutputOptionMenu(self, [("All Meshes", -1), ("1: This is a test", 1), ("2: if you see this please tell Jordan", 2)])
+		self.mesh_to_nudge_entry.pack()
+		if self.picoToolData.picoSave != None:
+			self.mesh_to_nudge_entry.build_choices_from_picoSave(self.picoToolData.picoSave)
+		self.mesh_to_nudge_entry.add_listener(self.picoToolData.set_selected_mesh)
+		self.picoToolData.add_picoSave_listener(self.mesh_to_nudge_entry.build_choices_from_picoSave)
+		self.picoToolData.add_selected_mesh_listener(self.mesh_to_nudge_entry.set_selection_index)
+		# so that when the mesh is updated this will be updated too!
 
 
-		# self.export_uvs = make_button(self, text = "Export Current Texture as PNG", command = self.export_texture)
-		# self.export_uvs.pack()
+		self.nudge_uvs_frame = tk.Frame(self)
+		self.nudge_uvs_frame.pack()
+		self.nudge_uvs_x = FloatEntry(self.nudge_uvs_frame, 0, width=5)
+		self.nudge_uvs_y = FloatEntry(self.nudge_uvs_frame, 0, width=5)
+		self.nudge_uvs_button = make_button(self.nudge_uvs_frame, text = "Shift UVs", command = lambda: self.nudge_uvs(self.nudge_uvs_x.float_value, self.nudge_uvs_y.float_value))
+		label = tk.Label(self.nudge_uvs_frame, text="X:")
+		label.pack(side="left", fill="both", expand=False)
+		self.nudge_uvs_x.pack(side="left")
+		label = tk.Label(self.nudge_uvs_frame, text="Y:")
+		label.pack(side="left", fill="both", expand=False)
+		self.nudge_uvs_y.pack(side="left")
+		self.nudge_uvs_button.pack(side="left")
 
-		# label = tk.Label(self, text=" ") # to space things out!
-		# label.pack(side="top", fill="both", expand=False)
-
-		# self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
-		# self.quitButton.pack()
 
 	def set_uv_padding(self, f):
 		self.picoToolData.uv_padding = f
@@ -2020,9 +2017,15 @@ class UVToolsPage(Page):
 		self.show_page(self.mainView.uv_unwrapping_page)
 
 	def swap_uvs(self):
-		for o in self.picoToolData.picoSave.objects:
+		for o in self.picoToolData.get_selected_mesh_objects():
 			for f in o.faces:
 				f.swap_uvs()
+		self.picoToolData.notify_update_render_listeners()
+
+	def nudge_uvs(self, x, y):
+		for o in self.picoToolData.get_selected_mesh_objects():
+			for f in o.faces:
+				f.nudge_uvs(x, y)
 		self.picoToolData.notify_update_render_listeners()
 
 	def unwrap_model(self):
@@ -2368,7 +2371,7 @@ class UVExportPage(Page):
 		self.show_page(self.mainView.uv_unwrapping_page)
 
 	def swap_uvs(self):
-		for o in self.picoToolData.picoSave.objects:
+		for o in self.picoToolData.get_selected_mesh_objects():
 			for f in o.faces:
 				f.swap_uvs()
 		self.picoToolData.notify_update_render_listeners()
@@ -2537,7 +2540,7 @@ class UVUnwrappingPage(Page):
 		naive_unwrap = make_button(self, text = "Naive UV Unwrap Model", command = self.unwrap_model)
 		naive_unwrap.pack()
 
-		swap_uvs = make_button(self, text = "Swap All UVs", command = self.swap_uvs)
+		swap_uvs = make_button(self, text = "Swap UVs", command = self.swap_uvs)
 		swap_uvs.pack()
 
 		flip_uvs_h = make_button(self, text = "Flip UVs Horizontally", command = self.flip_uvs_h)
@@ -2629,25 +2632,25 @@ class UVUnwrappingPage(Page):
 		self.show_page(self.mainView.uv_page)
 
 	def swap_uvs(self):
-		for o in self.picoToolData.picoSave.objects:
+		for o in self.picoToolData.get_selected_mesh_objects():
 			for f in o.faces:
 				f.swap_uvs()
 		self.picoToolData.notify_update_render_listeners()
 
 	def flip_uvs_h(self):
-		for o in self.picoToolData.picoSave.objects:
+		for o in self.picoToolData.get_selected_mesh_objects():
 			for f in o.faces:
 				f.flip_uvs_h()
 		self.picoToolData.notify_update_render_listeners()
 
 	def flip_uvs_v(self):
-		for o in self.picoToolData.picoSave.objects:
+		for o in self.picoToolData.get_selected_mesh_objects():
 			for f in o.faces:
 				f.flip_uvs_v()
 		self.picoToolData.notify_update_render_listeners()
 
 	def minimize_uv_size(self):
-		for o in self.picoToolData.picoSave.objects:
+		for o in self.picoToolData.get_selected_mesh_objects():
 			for f in o.faces:
 				f.minimize_uv_size()
 		self.picoToolData.notify_update_render_listeners()
@@ -2688,19 +2691,19 @@ class UVUnwrappingPage(Page):
 		self.picoToolData.notify_update_render_listeners()
 
 	def clamp_uvs_to_screen(self):
-		for o in self.picoToolData.picoSave.objects:
+		for o in self.picoToolData.get_selected_mesh_objects():
 			for f in o.faces:
 				f.clampUVs()
 		self.picoToolData.notify_update_render_listeners()
 
 	# def round_uvs_to_quarter_unit(self):
-	# 	for o in self.picoToolData.picoSave.objects:
+	# 	for o in self.picoToolData.get_selected_mesh_objects():
 	# 		for f in o.faces:
 	# 			f.round_normals(nearest = .25)
 	# 	self.picoToolData.notify_update_render_listeners()
 
 	def round_uvs_to_nearest(self, value=.25):
-		for o in self.picoToolData.picoSave.objects:
+		for o in self.picoToolData.get_selected_mesh_objects():
 			for f in o.faces:
 				f.round_normals(nearest = value)
 		self.picoToolData.notify_update_render_listeners()

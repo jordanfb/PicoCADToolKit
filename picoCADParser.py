@@ -273,6 +273,13 @@ class PicoFace:
 			self.uvs[i].y = 15-self.uvs[i].y # vertically we only go to 15
 		self.dirty = True
 
+	def nudge_uvs(self, x, y):
+		# for adjusting the uv positions
+		for i in range(len(self.uvs)):
+			self.uvs[i].x += x
+			self.uvs[i].y += y
+		self.dirty = True
+
 	def minimize_uv_size(self):
 		# reduce file size by setting UVs to a 0-1 square
 		coords = [[0, 0], [0, 1], [1, 1], [1, 0]]
