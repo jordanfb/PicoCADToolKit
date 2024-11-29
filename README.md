@@ -147,7 +147,7 @@ colors
 - Fixed color palette conversion color weights
 - Add support for loading pngs that aren't using the standard RGB format (for instance indexed).
 
-## v0.9.0
+## v0.9.0 UV Unwrapping Improvements
 
 - Resolved a number of issues including:
 	- fixed UV unwrapping faces
