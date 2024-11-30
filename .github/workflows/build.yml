@@ -21,7 +21,7 @@ jobs:
       continue-on-error: true
       # check if the release exists!
       # fail if it didn't exist!
-      uses: bruceadams/get-release@v1.2.2
+      uses: bruceadams/get-release@v1.3.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Output Existing Release URL File
@@ -95,11 +95,12 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: release_url
+        path: release_url.txt
     - name: Get Release File Name & Upload URL
       id: get_release_info
       shell: bash
       run: |
-        value=`cat release_url/release_url.txt`
+        value=`cat release_url.txt`
         echo "upload_url=$value" >> $GITHUB_OUTPUT
     - name: Upload Release Asset
       id: upload-release-asset
@@ -118,14 +119,15 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Load Release URL File from release job
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: release_url
+        path: release_url.txt
     - name: Get Release File Name & Upload URL
       id: get_release_info
       shell: bash
       run: |
-        value=`cat release_url/release_url.txt`
+        value=`cat release_url.txt`
         echo "upload_url=$value" >> GITHUB_OUTPUT
     - name: Upload Release Readme
       id: upload-release-asset
