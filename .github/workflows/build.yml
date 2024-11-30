@@ -95,6 +95,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: release_url
+        path: release_url
     - name: Get Release File Name & Upload URL
       id: get_release_info
       shell: bash
@@ -121,6 +122,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: release_url
+        path: release_url
     - name: Get Release File Name & Upload URL
       id: get_release_info
       shell: bash
