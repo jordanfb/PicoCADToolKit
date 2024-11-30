@@ -9,6 +9,7 @@ To download a pre-built version of the toolkit go to [https://github.com/jordanf
 
 To run this from the code clone the repo, make sure you have python 3.X installed, make sure you have the "pillow" library installed using pip3, and run toolkitUI.py to launch the user interface.
 
+For those new to git, you can download a .zip of the repo by clicking on the green "code" button, and then clicking "Download Zip" [image](https://github.com/user-attachments/assets/e3d46f1e-f044-4ab6-b955-b2cd8df9a08e).
 
 # Usage:
 
