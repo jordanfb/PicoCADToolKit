@@ -167,7 +167,7 @@ Thanks so much to everyone who has made this project possible!
 Here they are listed in order that they contributed to the project:
 
 
-Jordan Faas-Bush [Twitter: @quickpocket](https://twitter.com/quickpocket)
+Jordan Faas-Bush
 
 VinnyFettuccine
 
