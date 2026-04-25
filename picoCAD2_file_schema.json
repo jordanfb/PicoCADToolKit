@@ -8,6 +8,7 @@
         "Vector3":{
             "type":"object",
             "required":["x", "y", "z"],
+            "additionalProperties": false,
             "properties":{
                 "x":{"type":"number"},
                 "y":{"type":"number"},
@@ -55,6 +56,7 @@
                             "items":{
                                 "type":"object",
                                 "required":["uvs", "vertex_ids", "color"],
+                                "additionalProperties": false,
                                 "properties":{
                                     "uvs":{
                                         "type":"array",
@@ -88,6 +90,7 @@
                                 "type":"array",
                                 "items":{
                                     "type":"object",
+                                    "additionalProperties": false,
                                     "properties":{
                                         "start":{
                                             "type":"number",
@@ -153,6 +156,7 @@
         }
     },
     "required":["metadata", "graph", "texture"],
+    "additionalProperties": false,
     "properties":{
         "graph":{
             "$ref":"#/$defs/TreeObject"
@@ -181,6 +185,7 @@
                 "camera":{
                     "type":"object",
                     "required": ["pos", "target", "theta", "omega", "distance_to_target", "bookmark"],
+                    "additionalProperties": false,
                     "properties":{
                         "pos":{
                             "$ref":"#/$defs/Vector3"
@@ -223,6 +228,7 @@
                 "export_settings":{
                     "type":"object",
                     "required":["speed", "scanlines", "outline_color", "scanline_color", "size", "outline_size", "scale", "watermark", "watermark2", "anim", "dir"],
+                    "additionalProperties": false,
                     "properties":{
                         "speed":{"type":"number"},
                         "scanlines":{"type":"boolean"},
@@ -240,9 +246,31 @@
                             "maximum":15
                         },
                         "watermark":{"type":"string"},
+                        "watermark_color":{
+                            "type":"integer",
+                            "minimum":0,
+                            "maximum":15
+                        },
                         "watermark2":{"type":"string"},
+                        "watermark2_color":{
+                            "type":"integer",
+                            "minimum":0,
+                            "maximum":15
+                        },
                         "anim":{"type":"string"},
-                        "dir":{"type":"integer"}
+                        "dir":{"type":"integer"},
+                        "fov_type":{"type":"string"},
+                        "animate":{
+                            "anyOf":[
+                                {
+                                    "type":"string",
+                                    "$comment":"One was '1x'"
+                                },
+                                {
+                                    "type":"boolean"
+                                }
+                            ]
+                        }
                     }
                 }
             }
