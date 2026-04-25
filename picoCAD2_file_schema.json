@@ -1,0 +1,302 @@
+{
+    "$id": "https://picocad.net/picocad_2_schema_v2_0.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title":"picCAD 2 save file format 2.0",
+    "description":"JSON format for saving 3d models made in picoCAD 2 file format version 2.0",
+    "type": "object",
+    "$defs":{
+        "Vector3":{
+            "type":"object",
+            "required":["x", "y", "z"],
+            "properties":{
+                "x":{"type":"number"},
+                "y":{"type":"number"},
+                "z":{"type":"number"}
+            }
+        },
+        "TreeObject":{
+            "type":"object",
+            "required": ["name", "visible", "locked", "open", "transform", "motions", "children"],
+            "properties": {
+                "name":{
+                    "type":"string"
+                },
+                "visible":{
+                    "type":"boolean"
+                },
+                "locked":{
+                    "type":"boolean"
+                },
+                "open":{
+                    "type":"boolean"
+                },
+                "folder":{
+                    "type":"boolean"
+                },
+                "ghost":{
+                    "type":"boolean"
+                },
+                "mesh":{
+                    "type":"object",
+                    "required":["name", "vertices", "faces"],
+                    "properties": {
+                        "name":{
+                            "type":"string"
+                        },
+                        "vertices":{
+                            "type":"array",
+                            "items":{
+                                "$comment":"Always a multiple of three long, this is the x,y,z coordinates of the vertices flattened into a list",
+                                "type":"number"
+                            }
+                        },
+                        "faces":{
+                            "type":"array",
+                            "items":{
+                                "type":"object",
+                                "required":["uvs", "vertex_ids", "color"],
+                                "properties":{
+                                    "uvs":{
+                                        "type":"array",
+                                        "items":{
+                                            "$comment":"Always a multiple of two long, this is the u,v coordinates of the vertices flattened into a list",
+                                            "type":"number"
+                                        }
+                                    },
+                                    "vertex_ids":{
+                                        "type":"array",
+                                        "items":{
+                                            "type":"integer"
+                                        }
+                                    },
+                                    "color":{"type":"integer", "minimum": 0, "maximum": 15},
+                                    "dbl":{"type":"boolean", "$comment": "If this face renders double sided"},
+                                    "prio":{"type":"boolean", "$comment": "If this face draws behind other faces"},
+                                    "noshade":{"type":"boolean", "$comment": "If this face isn't shaded"},
+                                    "notex":{"type":"boolean", "$comment": "If this face isn't textured"}
+                                }
+                            }
+                        }
+                    }
+                },
+                "motions":{
+                    "type":"object",
+                    "properties": {
+                        "tracks":{
+                            "type":"array",
+                            "items":{
+                                "type":"array",
+                                "items":{
+                                    "type":"object",
+                                    "properties":{
+                                        "start":{
+                                            "type":"number",
+                                            "$comment":"Start time for the animation."
+                                        },
+                                        "stop":{
+                                            "type":"number",
+                                            "$comment":"Stop time for the animation."
+                                        },
+                                        "pingpong":{
+                                            "type":"boolean",
+                                            "$comment":"If the animation should return to the start."
+                                        },
+                                        "curve":{
+                                            "type":"string",
+                                            "$comment":"The easing curve used. Currently has linear, 'ease in', 'ease out', soft, elastic, bounce, instant."
+                                        },
+                                        "delta":{
+                                            "type":"number",
+                                            "$comment":"The 'amount' to do each aninmation. #rotations, scale percent, etc."
+                                        },
+                                        "icon":{
+                                            "type":"integer",
+                                            "$comment":"Seems to only be used for ~ animations. Unsure what it means."
+                                        },
+                                        "times":{
+                                            "type":"number",
+                                            "$comment":"Seems to only be used for ~ animations. How many times to do the animation in that period."
+                                        },
+                                        "axises":{
+                                            "type":"array",
+                                            "items":{
+                                                "enum":["x", "y", "z"]
+                                            },
+                                            "$comment":"The axes to run the animation on."
+                                        },
+                                        "prop":{
+                                            "type":"string",
+                                            "$comment":"The property to modify. Currently has rot, scale, pos, visible."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "transform":{
+                    "type":"object",
+                    "required":["pos", "rot", "scale"],
+                    "properties": {
+                        "pos":{ "$ref": "#/$defs/Vector3" },
+                        "rot":{ "$ref": "#/$defs/Vector3" },
+                        "scale":{ "$ref": "#/$defs/Vector3" }
+                    }
+                },
+                "children":{
+                    "type":"array",
+                    "items":{
+                        "$ref": "#$defs/TreeObject"
+                    }
+                }
+            }
+        }
+    },
+    "required":["metadata", "graph", "texture"],
+    "properties":{
+        "graph":{
+            "$ref":"#/$defs/TreeObject"
+        },
+        "metadata":{
+            "type":"object",
+            "required":["version", "motion_duration", "shading_mode", "face_mode", "camera", "export_settings"],
+            "properties": {
+                "version":{
+                    "type":"string",
+                    "pattern":"^\\d+\\.\\d+$",
+                    "$comment": "Version number is currently '2.0'."
+                },
+                "motion_duration":{
+                    "type":"number",
+                    "minimum": 0
+                },
+                "shading_mode":{
+                    "enum":[0,1],
+                    "$comment":"0 is unshaded, 1 is shaded."
+                },
+                "face_mode":{
+                    "enum":[0,1,2],
+                    "$comment":"0 is wireframe, 1 is solid, 2 is textured."
+                },
+                "camera":{
+                    "type":"object",
+                    "required": ["pos", "target", "theta", "omega", "distance_to_target", "bookmark"],
+                    "properties":{
+                        "pos":{
+                            "$ref":"#/$defs/Vector3"
+                        },
+                        "target":{
+                            "$ref":"#/$defs/Vector3"
+                        },
+                        "theta":{
+                            "type":"number"
+                        },
+                        "omega":{
+                            "type":"number"
+                        },
+                        "distance_to_target":{
+                            "type":"number"
+                        },
+                        "bookmark":{
+                            "type":"object",
+                            "required": ["pos", "target", "theta", "omega", "distance_to_target"],
+                            "properties": {
+                                "pos":{
+                                    "$ref":"#/$defs/Vector3"
+                                },
+                                "target":{
+                                    "$ref":"#/$defs/Vector3"
+                                },
+                                "theta":{
+                                    "type":"number"
+                                },
+                                "omega":{
+                                    "type":"number"
+                                },
+                                "distance_to_target":{
+                                    "type":"number"
+                                }
+                            }
+                        }
+                    }
+                },
+                "export_settings":{
+                    "type":"object",
+                    "required":["speed", "scanlines", "outline_color", "scanline_color", "size", "outline_size", "scale", "watermark", "watermark2", "anim", "dir"],
+                    "properties":{
+                        "speed":{"type":"number"},
+                        "scanlines":{"type":"boolean"},
+                        "outline_color":{
+                            "type":"integer",
+                            "minimum":0,
+                            "maximum":15
+                        },
+                        "size":{"type":"integer"},
+                        "outline_size":{"type":"integer"},
+                        "scale":{"type":"number"},
+                        "scanline_color":{
+                            "type":"integer",
+                            "minimum":0,
+                            "maximum":15
+                        },
+                        "watermark":{"type":"string"},
+                        "watermark2":{"type":"string"},
+                        "anim":{"type":"string"},
+                        "dir":{"type":"integer"}
+                    }
+                }
+            }
+        },
+        "texture":{
+            "type":"object",
+            "required":["colors", "shade_pal_1", "shade_pal_2", "transparent_color", "background_color", "pixels"],
+            "properties": {
+                "colors":{
+                    "$comment":"Array of 16 RGB triples from 0-1",
+                    "type":"array",
+                    "minItems":16,
+                    "maxItems":16,
+                    "items":{
+                        "type":"array",
+                        "items":{
+                            "type":"number",
+                            "minItems": 3,
+                            "maxItems": 3
+                        }
+                    }
+                },
+                "shade_pal_1":{
+                    "type":"array",
+                    "items":{
+                        "type":"integer",
+                        "minItems": 16,
+                        "maxItems": 16
+                    }
+                },
+                "shade_pal_2":{
+                    "type":"array",
+                    "items":{
+                        "type":"integer",
+                        "minItems": 16,
+                        "maxItems": 16
+                    }
+                },
+                "transparent_color":{
+                    "type":"integer",
+                    "minimum": 0,
+                    "maximum": 15
+                },
+                "background_color":{
+                    "type":"integer",
+                    "minimum": 0,
+                    "maximum": 15
+                },
+                "pixels":{
+                    "$comment":"Hexadecimal character for each pixel in the texture image. 128x128 means 16384 pixels total",
+                    "type":"string",
+                    "pattern":"^[\\dabcdef]{16384}$"
+                }
+            }
+        }
+    }
+}
