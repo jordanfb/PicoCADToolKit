@@ -146,7 +146,7 @@
                 "children":{
                     "type":"array",
                     "items":{
-                        "$ref": "#$defs/TreeObject"
+                        "$ref": "#/$defs/TreeObject"
                     }
                 }
             }
