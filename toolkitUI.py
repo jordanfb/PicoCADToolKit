@@ -90,12 +90,12 @@ class PicoToolData:
 
 		self.only_render_selected_objects = True
 
-	def get_selected_mesh_objects(self):
+	def get_selected_mesh_objects(self)->list[PicoObject]:
 		if self.picoSave == None:
 			return []
 		return self.picoSave.get_mesh_objects(self.selected_mesh_index)
 
-	def get_objects_to_render(self):
+	def get_objects_to_render(self)->list[PicoObject]:
 		if self.picoSave == None:
 			return []
 		if self.only_render_selected_objects:
@@ -177,7 +177,7 @@ class BigImagePage(Page):
 	# this is just for the canvas explanation basically
 	def __init__(self, master, mainView, picoToolData):
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "Big Axes Picture"
 
@@ -243,7 +243,7 @@ class MeshDisplayCanvas(tk.Canvas):
 		self.projection_list = [self.view_matrix]
 		self.picoSave = None
 		self.master = master
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		self.render_mesh = True
 		tk.Canvas.__init__(self, master, *args, **kwargs)
 		# self.axescanvas = tk.Canvas(self.axes_frame, width = 100, height = 100, cursor="hand2")
@@ -306,11 +306,11 @@ class MeshDisplayCanvas(tk.Canvas):
 		self.bind("<Leave>", self.lost_focus)
 
 	def scroll_wheel_zoom(self, event):
-	    if event.delta > 0:
-	    	self.update_zoom(2)
-	    else:
-	    	self.update_zoom(.5)
-	    return "break" 
+		if event.delta > 0:
+			self.update_zoom(2)
+		else:
+			self.update_zoom(.5)
+		return "break"
 
 	def update_coordinate_position(self, delta):
 		self.picoToolData.projection_coords += delta
@@ -404,7 +404,7 @@ class MeshDisplayCanvas(tk.Canvas):
 class ImageColorEditingPage(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "Image Color Palette Editing"
 		# this page here is for converting random images of whatever size to nice images in the pico8 color palatte.
@@ -713,7 +713,7 @@ class ImageColorEditingPage(Page):
 class IntroPage(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "Introduction"
 		label = tk.Label(self, text="Welcome!\nThis is Jordan's picoCAD Toolkit!")
@@ -822,7 +822,7 @@ class IntroPage(Page):
 class DebugToolsPage(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "Debug"
 		label = tk.Label(self, text="Debug Options:")
@@ -870,7 +870,7 @@ class DebugToolsPage(Page):
 class StatsPage(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		self.picoToolData.add_picoSave_listener(lambda x: self.calculate_stats())
 		Page.__init__(self, master)
 		self.page_name = "Stats"
@@ -994,7 +994,7 @@ class FileEditingMaster(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.master = master
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "File Editing"
 		# this page is mainly for copying things from a different file into this one. Will we add more features later? No clue.
@@ -1080,7 +1080,7 @@ class MeshEditingMaster(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.mainView = mainView
 		self.master = master
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "Mesh Editing"
 
@@ -1610,7 +1610,7 @@ class MeshEditingMaster(Page):
 		print("Scaling mesh(es) by " + str(x) + ", " + str(y) + ", " + str(z), flush=True)
 		for o in objs:
 			# scale the objects!
-			o.scale(x, y, z)
+			o.scale_verts(x, y, z)
 		self.picoToolData.notify_update_render_listeners()
 
 	def scale_object_position(self):
@@ -1679,7 +1679,7 @@ class UVMasterPage(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.mainView = mainView
 		self.master = master
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "UVs"
 
@@ -1877,7 +1877,7 @@ class UVToolsPage(Page):
 
 		self.master = master
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "UVs"
 		# label = tk.Label(self, text="UV Layout Page:")
@@ -2118,7 +2118,7 @@ class FaceConversionFrame(tk.Frame):
 	def __init__(self, master, mainView, picoToolData):
 		self.master = master
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		tk.Frame.__init__(self, master)
 		# this is a pretty simple one, it just has buttons for setting the face values of every face on the objects
 		# lots of toggles and buttons!
@@ -2303,7 +2303,7 @@ class UVExportPage(Page):
 
 		self.master = master
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "UV Export"
 
@@ -2481,7 +2481,7 @@ class UVUnwrappingPage(Page):
 		self.master = master
 
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "UVs"
 		# label = tk.Label(self, text="UV Unwrawpping Page:")
@@ -2791,7 +2791,7 @@ class UVUnwrappingPage(Page):
 class MainToolPage(Page):
 	def __init__(self, master, mainView, picoToolData):
 		self.mainView = mainView
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		Page.__init__(self, master)
 		self.page_name = "Tools"
 		label = tk.Label(self, text="Tools Pages:")
@@ -2967,7 +2967,7 @@ class MainToolPage(Page):
 
 class MainView(tk.Frame): # this is the thing that has every page inside it.
 	def __init__(self, master, picoToolData):
-		self.picoToolData = picoToolData
+		self.picoToolData:PicoToolData = picoToolData
 		tk.Frame.__init__(self, master)
 		container = tk.Frame(self, width=400) # this is used to make all of the pages the same size
 

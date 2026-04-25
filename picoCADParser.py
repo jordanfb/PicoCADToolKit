@@ -17,7 +17,8 @@ import sys
 import math
 from PIL import Image, ImageDraw
 from decimal import *
-
+import json
+import jsonschema
 
 colors = [
 (0, 0, 0),
@@ -92,7 +93,8 @@ def normalize_fraction(d):
     return normalized if exponent <= 0 else normalized.quantize(1)
 
 class PicoFace:
-	def __init__(self, picoObject, vertexIndices, uvs, color = 0, doublesided = False, notshaded = False, priority = False, nottextured = False):
+	def __init__(self, picoObject:PicoObject, vertexIndices:list[int], uvs:list[SimpleVector], color:int = 0,
+			  					doublesided:bool = False, notshaded:bool = False, priority:bool = False, nottextured:bool = False):
 		self.obj = picoObject
 		self.vertices = vertexIndices
 		self.uvs = uvs
@@ -413,15 +415,42 @@ class PicoFace:
 
 
 class PicoObject:
-	def __init__(self, obj_or_Text):
+	def __init__(self, obj_or_Text:str|PicoObject|dict, version:str="1.0"):
+		self.parent:PicoObject = None
+		self.children:list[PicoObject] = []
+		# things in picoCAD 2 that may not be in picoCAD 1:
+		self.has_mesh:bool = True
+		self.mesh_name:str = ""
+		self.raw_motions_data:dict = {} # for now, we won't support animations and will just save them as we loaded them
+		self.folder:bool = False
+		self.ghost:bool = False
+		self.visible:bool = True
+		self.locked:bool = False
+		self.open:bool = False
+
+		# used to store unhandled values so that we don't lose data if I missed something
+		self.unhandled:dict = {}
+
+		self.vertices:list[SimpleVector] = []
+		self.faces:list[PicoFace] = []
+
 		# vertices
 		# faces
 		if type(obj_or_Text) == PicoObject:
 			# then initialize this one by copying all the values in that one.
 			# copy base info
+			self.has_mesh = obj_or_Text.has_mesh
+			self.mesh_name = obj_or_Text.mesh_name
+			self.parent = obj_or_Text.parent
+			self.children = [] # I'M NOT SURE HOW TO DEAL WITH THIS YET... FOR NOW JUST ALERT
+			if len(obj_or_Text.children) > 0:
+				# this is currently only when we split disjoint meshes into separate objects
+				print("COPIED A PICOOBJECT WITH CHILDREN, UNSURE HOW TO DEAL WITH THAT FOR NOW...")
+
 			self.name = obj_or_Text.name
 			self.pos = obj_or_Text.pos.copy()
 			self.rot = obj_or_Text.rot.copy()
+			self.scale = obj_or_Text.scale.copy()
 			# copy vertices
 			self.vertices = [v.copy() for v in obj_or_Text.vertices]
 			# copy faces
@@ -430,13 +459,74 @@ class PicoObject:
 				f.obj = self # make sure they know that I'm their new container!
 			self.dirty = True # probably should count this as dirty... hmmm
 			return
-		# otherwise we're importing from the raw text!
-		self.parse_base_info(obj_or_Text)
-		self.parse_vertices(obj_or_Text)
-		self.parse_faces(obj_or_Text)
-		# self.debug_print()
-		# self.scale_uniform(2)
+		if version == "1.0":
+			# otherwise we're importing from the raw text!
+			self.parse_base_info(obj_or_Text)
+			self.parse_vertices(obj_or_Text)
+			self.parse_faces(obj_or_Text)
+		else:
+			self.parse_v2(obj_or_Text, version)
 		self.dirty = False
+	
+	def parse_v2(self, d:dict, version:str)->None:
+		_known_fields = ["name", "transform", "pos", "ghost", "visible", "locked", "open", "motions", "mesh", "children"]
+		for k, v in d.items():
+			if k not in _known_fields:
+				print(f"WARNING: FOUND UNHANDLED KEY '{k}' IN PICOOBJECT, PLEASE REPORT THIS AS AN ISSUE")
+				self.unhandled[k] = v
+
+		self.name = d["name"]
+
+		self.pos = SimpleVector(d["transform"]["pos"])
+		self.rot = SimpleVector(d["transform"]["rot"])
+		self.scale = SimpleVector(d["transform"]["scale"])
+
+		self.folder = d.get("folder", self.folder)
+		self.ghost = d.get("ghost", self.ghost)
+		self.visible = d.get("visible", self.visible)
+		self.locked = d.get("locked", self.locked)
+		self.open = d.get("open", self.open)
+
+		self.raw_motions_data = d.get("motions", {})
+
+		self.has_mesh = "mesh" in d
+		if self.has_mesh:
+			# then we have a mesh!
+			self.mesh_name = d["mesh"].get("name", "")
+			if "vertices" in d["mesh"]:
+				self.vertices = []
+				verts:list[float] = d["mesh"]["vertices"]
+				for i in range(0, len(verts), 3):
+					self.vertices.append(SimpleVector(verts[i], verts[i+1], verts[i+2]))
+			if "faces" in d["mesh"]:
+				self.faces = []
+				faces:list[dict] = d["mesh"]["faces"]
+				for face in faces:
+					vert_ids:list[int] = face["vertex_ids"]
+					color:int = face["color"]
+					uvs:list[SimpleVector] = []
+					for i in range(0, len(face["uvs"]), 2):
+						uvs.append(SimpleVector(face["uvs"][i], face["uvs"][i+1]))
+					doublesided = "dbl" in face
+					priority = "prio" in face
+					notshaded = "noshade" in face
+					nottextured = "notex" in face
+					self.faces += [PicoFace(self, vert_ids, uvs, color, doublesided, notshaded, priority, nottextured)]
+		if "children" in d:
+			for child_d in d["children"]:
+				child:PicoObject = PicoObject(child_d, version)
+				child.parent = self
+				self.children.append(child)
+	
+	def flatten_tree(self)->list[PicoObject]:
+		# flatten everything underneath us into a tree
+		output = []
+		def _flatten_tree_inner(o:PicoObject):
+			output.append(o)
+			for child in o.children:
+				_flatten_tree_inner(child)
+		_flatten_tree_inner(self)
+		return output
 
 	def copy(self):
 		# return a new picoObject. It'll be a bit janky
@@ -448,7 +538,7 @@ class PicoObject:
 				self.vertices[i][j] = self.vertices[i][j] * scalar
 		self.dirty = True
 
-	def scale(self, x, y, z):
+	def scale_verts(self, x, y, z):
 		for i in range(len(self.vertices)):
 			self.vertices[i][0] = self.vertices[i][0] * x
 			self.vertices[i][1] = self.vertices[i][1] * y
@@ -1026,6 +1116,9 @@ class PicoObject:
 		rottext = rottext[1:-1] # cut off the {}
 		self.rot = SimpleVector([Decimal(s) for s in rottext.split(',')])
 
+		# v1 didn't have individual scales, but now we need it for v2
+		self.scale:SimpleVector = SimpleVector(1, 1, 1)
+
 	def parse_vertices(self, obj_text):
 		verticestext = get_sub_table(obj_text, "v={")
 		vertices = []
@@ -1101,30 +1194,38 @@ class PicoObject:
 		return self.name + ' ' + str(self.pos)
 
 class PicoSave:
-	def __init__(self, filepath_or_picoSave, original_text, objects):
+	def __init__(self, filepath_or_picoSave:PicoSave|str, original_text:str, objects:list[PicoObject], save_version:str):
 		if type(filepath_or_picoSave) == PicoSave:
 			# then make a copy of that one!
 			# This is a little ugly but it works I guess
 			o = filepath_or_picoSave # just so it's easier to type...
-			self.original_text = o.original_text
-			self.objects = [obj.copy() for obj in o.objects]
-			self.header = o.header
-			self.parse_header(self.header) # parse it again for funsies?
-			self.footer = o.footer
-			self.dirty = True
-			self.original_path = o.original_path
-		self.original_text = original_text
-		self.objects = objects
-		self.header = original_text.split("\n")[0] # the first line!
-		self.parse_header(self.header)
-		self.footer = "%" + original_text.split("%")[1]
-		self.dirty = False
-		self.original_path = filepath_or_picoSave
+			self.original_text:str = str(o.original_text)
+			self.objects:list[PicoObject] = [obj.copy() for obj in o.objects]
+			self.header:str = str(o.header)
+			if o.save_version == "1.0":
+				self.parse_picocad1_header(self.header) # parse it again for funsies?
+			self.footer:str = str(o.footer)
+			self.dirty:bool = True
+			self.original_path:str = str(o.original_path)
+			self.save_version:str = o.save_version
+		else:
+			self.original_text:str = original_text
+			self.objects:list[PicoObject] = objects
+			if save_version == "1.0":
+				self.header:str = original_text.split("\n")[0] # the first line!
+				self.parse_picocad1_header(self.header)
+				self.footer:str = "%" + original_text.split("%")[1]
+			else:
+				self.header:str = ""
+				self.footer:str = ""
+			self.dirty:bool = False
+			self.original_path:str = filepath_or_picoSave
+			self.save_version:str = save_version
 
 	def copy(self):
-		return PicoSave(self, None, None)
+		return PicoSave(self, None, None, self.save_version)
 
-	def parse_header(self, header):
+	def parse_picocad1_header(self, header):
 		# identifier;filename;zoomlevel;bgcolor;alphacolor
 		lineInfo = header.strip().split(";")
 		self.identifier = lineInfo[0]
@@ -1151,18 +1252,22 @@ class PicoSave:
 		return len(file_text_without_texture), len(file_text)
 
 	def output_save_text(self, save_file_name):
-		header = self.header.split(";")
-		header = [header[0]] + [save_file_name] + header[2:]
-		# I probably should use the parsed values from the parse_header function but for now this works
-		header = ";".join(header)
-		o = header + "\n{"
-		for obj in self.objects:
-			o += "\n" + obj.output_save_text() + ","
-		o = o[:-1] # get rid of last comma
-		o += "\n}" + self.footer
+		if self.save_version == "1.0":
+			header = self.header.split(";")
+			header = [header[0]] + [save_file_name] + header[2:]
+			# I probably should use the parsed values from the parse_picocad1_header function but for now this works
+			header = ";".join(header)
+			o = header + "\n{"
+			for obj in self.objects:
+				o += "\n" + obj.output_save_text() + ","
+			o = o[:-1] # get rid of last comma
+			o += "\n}" + self.footer
+		else:
+			# save as json
+			raise NotImplementedError("Implement save v2.0")
 		return o
 
-	def get_mesh_objects(self, id_or_negative_one):
+	def get_mesh_objects(self, id_or_negative_one)->list[PicoObject]:
 		# pass in -1 or 1,2,3,4,5 etc. and this will return a list of the objects!
 		# this is useful for operating on only a subsection of meshes!
 		if id_or_negative_one == -1:
@@ -1289,7 +1394,7 @@ class PicoSave:
 		obj_removed = self.objects.pop(index)
 		print("Removed object: " + str(obj_removed))
 
-	def duplicate_object(self, obj):
+	def duplicate_object(self, obj:PicoObject):
 		self.dirty = True
 		obj_new = obj.copy()
 		obj_new.dirty = True
@@ -1418,7 +1523,11 @@ class SimpleVector:
 	def __init__(self, x_or_list, y = 0, z = 0):
 		# pass in coords!
 		# print(type(x_or_list), type(x_or_list) == list, x_or_list)
-		if type(x_or_list) == list or type(x_or_list) == tuple:
+		if type(x_or_list) == dict:
+			self.x = Decimal(x_or_list.get("x", 0))
+			self.y = Decimal(x_or_list.get("y", 0))
+			self.z = Decimal(x_or_list.get("z", 0))
+		elif type(x_or_list) == list or type(x_or_list) == tuple:
 			self.x = Decimal(0)
 			self.y = Decimal(0)
 			self.z = Decimal(0)
@@ -1654,46 +1763,65 @@ def make_z_rotation_matrix(z_radians):
 
 def load_picoCAD_save(filepath):
 	if os.path.exists(filepath):
-		# print("it's real!")
 		f = open(filepath, "r")
 		text = f.read()
-		# print(text)
+		try:
+			# picoCAD 2 files are valid json dicts, so try loading it as one first.
+			# if it's not a json dict then just ignore it for now
+			j = json.loads(text)
+			if j is dict:
+				return try_load_picoCAD2_save(filepath, j)
+		except json.JSONDecodeError as e:
+			# if it's not valid json then it's likely a picocad1 file, so try loading that instead.
+			pass
+		return try_load_picoCAD1_save(filepath, text)
+	else:
+		print("Error: file", filepath, "does not exist!")
+		return None, False
+
+def try_load_picoCAD2_save(filepath:str, data:dict)->tuple[PicoSave, bool]:
+	missing_fields:list[str] = [f for f in ["metadata", "graph", "texture"] if f not in data]
+	if len(missing_fields) > 0:
+		print(f"File {filepath} missing expected fields {', '.join(missing_fields)}, thus is unlikely to be a picoCAD file")
+		return None, False
+	metadata:dict = data.get("metadata", {})
+	version:str = metadata.get("version", "")
+	if len(version) == 0:
+		print("Failed to parse version from file, so assuming it's not a picoCAD file")
+		return None, False
+	objects:list[PicoObject] = parse_picoCAD2_objects(data)
+	return PicoSave(filepath, json.dumps(data), objects, version)
+
+def try_load_picoCAD1_save(filepath:str, text:str)->tuple[PicoSave, bool]:
 		first_line = text.split("\n")[0]
 		if "picocad" not in first_line:
 			return None, False
 		json_text = text[text.index("{"):text.rindex("}")+1] # cut out the text at the beginning and the sprite sheet at the end!
 		if len(json_text) == 0:
 			return None, False
-		# print(json_text)
-		# json_text = json_text.replace("'", '"')
-		# json_text = json_text.replace("=", ':')
-		# print(json_text)
-		# return ""
-		objects = parse_picoCAD_objects(json_text)
+		objects = parse_picoCAD1_objects(json_text)
 		if len(objects) == 0:
 			# arguably it could be valid? Hmmmmm.
 			return None, False
-		s = PicoSave(filepath, text, objects)
-		# output = s.output_save_text()
-		# print("\n\n\nOUTPUT:")
-		# print(output)
-		# for i in range(len(output)):
-		# 	if output[i] != text[i]:
-		# 		print(output[i:])
-		# 		break
-		# print(output == text)
+		s = PicoSave(filepath, text, objects, "1.0")
 		return s, True
-	else:
-		print("Error: file", filepath, "does not exist!")
-		return None, False
 
 def float_to_str(f):
 	if int(f) == f:
 		return str(int(f))
 	return str(f).rstrip("0") # remove trailing 0s
 
+def parse_picoCAD2_objects(d:dict, version:str)->list[PicoObject]:
+	"""
+	Build and return a list of the objects. Because I'm trying perhaps naively to maintain cross compatibility,
+	I'm going to go ahead and store them flat but give each one a reference to the parent object and children...
+	We'll see how it works out.
+	"""
+	root:PicoObject = PicoObject(d["graph"], version)
+	objects:list[PicoObject] = root.flatten_tree()
+	return objects
 
-def parse_picoCAD_objects(json_text):
+def parse_picoCAD1_objects(json_text):
 	# turns out the pico save isn't nice json because it's used in lua, so everything's a table...
 	# guess we'll have to figure out how to parse it nicely!
 	objects = []
@@ -1709,7 +1837,7 @@ def parse_picoCAD_objects(json_text):
 		# get_sub_table(obj, "pos:{")
 		# name = get_sub_table(obj, "name:", indent = '"', outdent = '"')
 		# print("name:", name)
-		picoObj = PicoObject(obj)
+		picoObj = PicoObject(obj, "1.0")
 		output += [picoObj]
 	return output
 
@@ -1820,6 +1948,14 @@ def equation_plane(x1, y1, z1, x2, y2, z2, x3, y3, z3, x, y, z):
 	return a * x + b * y + c * z + d == 0
 
 
+if __name__ == "__main__":
+	fn:str = "/Users/jordan/Library/Application Support/picocad2/test_v2_sample.txt"
+	# fn:str = "/Users/jordan/Library/Application Support/picocad2/test_flower_downloaded.txt"
+	# fn:str = "/Users/jordan/Library/Application Support/picocad2/test_pig_massive_duplicated.txt"
+	with open("picoCAD2_file_schema.json", "r") as schema_f:
+		schema:dict = json.load(schema_f)
+		with open(fn, "r") as f:
+			jsonschema.validate(json.load(f), schema)
 
 # if __name__ == "__main__":
 # 	# test stuff!
