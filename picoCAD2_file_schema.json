@@ -1,7 +1,7 @@
 {
     "$id": "https://picocad.net/picocad_2_schema_v2_0.json",
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title":"picCAD 2 save file format 2.0",
+    "title":"picoCAD 2 save file format 2.0",
     "description":"JSON format for saving 3d models made in picoCAD 2 file format version 2.0",
     "type": "object",
     "$defs":{
