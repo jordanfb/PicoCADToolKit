@@ -456,6 +456,11 @@ class PicoObject:
 		self.locked:bool = False
 		self.open:bool = False
 
+		# cache the global transform info here:
+		self.cached_transform_key:str = ""
+		self.cached_global_transform:list[list[float]] = []
+		self.cached_global_inverse_transform:list[list[float]] = []
+
 		# used to store unhandled values so that we don't lose data if I missed something
 		self.unhandled:dict = {}
 
@@ -785,11 +790,31 @@ class PicoObject:
 				return True
 		return False
 	
+	def _get_global_transform_matrix_hash(self)->str:
+		s = ""
+		if self.parent is not None:
+			s = self.parent._get_global_transform_matrix_hash()
+		s += self.pos.get_str()+","+self.scale.get_str()+","+ \
+					self.rot.get_str()+","
+		return s
+
 	def get_global_transform_matrix(self)->list[list[float]]:
-		return multiply_n_matrices(self.get_global_transform_matrix_chain())
+		key = self._get_global_transform_matrix_hash()
+		if key == self.cached_transform_key:
+			return self.cached_global_transform
+		self.cached_transform_key = key
+		self.cached_global_transform = multiply_n_matrices(self.get_global_transform_matrix_chain())
+		self.cached_global_inverse_transform = multiply_n_matrices(self.get_global_inverse_transform_matrix_chain())
+		return self.cached_global_transform
 
 	def get_global_inverse_transform_matrix(self)->list[list[float]]:
-		return multiply_n_matrices(self.get_global_inverse_transform_matrix_chain())
+		key = self._get_global_transform_matrix_hash()
+		if key == self.cached_transform_key:
+			return self.cached_global_inverse_transform
+		self.cached_transform_key = key
+		self.cached_global_transform = multiply_n_matrices(self.get_global_transform_matrix_chain())
+		self.cached_global_inverse_transform = multiply_n_matrices(self.get_global_inverse_transform_matrix_chain())
+		return self.cached_global_inverse_transform
 
 	def get_global_transform_matrix_chain(self)->list[list[list[float]]]:
 		chain:list[list[list[float]]] = [
@@ -1730,6 +1755,9 @@ class SimpleVector:
 	def clampToUVSize(self):
 		self.x = max(0, min(16, self.x))
 		self.y = max(0, min(15, self.y))
+	
+	def get_str(self)->str:
+		return str(self.x)+","+str(self.y)+","+str(self.z)
 
 	def mat_mult(self, mat):
 		# the matrix is [[1,2,3,4],[5,6,7,8],[9,10,11,12],[0,0,0,1]]
