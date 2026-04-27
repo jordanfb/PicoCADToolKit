@@ -129,7 +129,7 @@ class PicoFace:
 	def mark_clean(self):
 		self.dirty = False
 
-	def set_all_uvs_to_coordinate(self, coord):
+	def set_all_uvs_to_coordinate(self, coord:SimpleVector):
 		# this is useful for converting faces from no-texture to texture because it'll set the UV to be a single pixel on the sheet!
 		for i in range(len(self.uvs)):
 			self.uvs[i] = coord.copy()
@@ -139,8 +139,36 @@ class PicoFace:
 		for uv in self.uvs:
 			uv.clampToUVSize()
 		self.dirty = True
+	
+	def output_save_dict(self, version:str="2.0")->dict:
+		"""
+		Used for version 2.0+ save files
+		"""
+		flat_uvs:list[float] = []
+		for u in self.uvs:
+			flat_uvs.append(float(u.x))
+			flat_uvs.append(float(u.y))
+		
+		o:dict = {
+			"vertex_ids":self.vertices,
+			"color":self.color,
+			"uvs":flat_uvs
+		}
+		if self.notshaded:
+			o["noshade"] = True
+		if self.nottextured:
+			o["notex"] = True
+		if self.priority:
+			o["prio"] = True
+		if self.doublesided:
+			o["dbl"] = True
+
+		return o
 
 	def output_save_text(self):
+		"""
+		Used for version 1.0 save file
+		"""
 		# the text that'll get printed.
 		o = "{"
 		o += ",".join([str(x) for x in self.vertices])
@@ -1173,8 +1201,52 @@ class PicoObject:
 		t = "Object: name: " + str(self.name) + " pos: " + str(self.pos) + " rot: " + str(self.rot) + "\nVertices: " + str(self.vertices) + "\n"
 		t += "\n".join([str(f) for f in self.faces])
 		print(t)
+	
+	def output_transform_dict(self, version:str="2.0")->dict:
+		return {
+			"pos":self.pos.to_json_dict(),
+			"rot":self.rot.to_json_dict(),
+			"scale":self.scale.to_json_dict()
+		}
+
+	def output_save_dict(self, version:str="2.0")->dict:
+		"""
+		Used for version 2.0+ save files
+		"""
+		
+		o:dict = {
+			"name":self.name,
+			"visible":self.visible,
+			"locked":self.locked,
+			"open":self.open,
+			"motions":self.raw_motions_data,
+			"transform":self.output_transform_dict(version),
+			"open":self.open,
+			"folder":self.folder,
+			"children":[c.output_save_dict(version) for c in self.children]
+		}
+
+		if self.ghost:
+			o["ghost"] = self.ghost
+
+		if self.has_mesh:
+			flat_vertices:list[float] = []
+			for v in self.vertices:
+				flat_vertices.append(float(v.x))
+				flat_vertices.append(float(v.y))
+				flat_vertices.append(float(v.z))
+			o["mesh"] = {
+				"vertices":flat_vertices,
+				"name":self.mesh_name,
+				"faces":[f.output_save_dict(version) for f in self.faces]
+			}
+
+		return o
 
 	def output_save_text(self):
+		"""
+		Used for version 1.0 save file
+		"""
 		o = "{\n name='" + self.name + "', pos={" + ",".join([float_to_str(x) for x in self.pos]) + "}, rot={" + ",".join([float_to_str(x) for x in self.rot]) +"},\n v={"
 		# now add the vertex locations!
 		for v in self.vertices:
@@ -1195,6 +1267,13 @@ class PicoObject:
 
 class PicoSave:
 	def __init__(self, filepath_or_picoSave:PicoSave|str, original_text:str, objects:list[PicoObject], save_version:str):
+		# generic stuff that gets overwritten by the save
+		self.identifier = "UNKNOWN"
+		self.filename = "UNKNOWN"
+		self.zoomlevel = 1
+		self.bgcolor = 0
+		self.alphacolor = 8
+
 		if type(filepath_or_picoSave) == PicoSave:
 			# then make a copy of that one!
 			# This is a little ugly but it works I guess
@@ -1218,12 +1297,27 @@ class PicoSave:
 			else:
 				self.header:str = ""
 				self.footer:str = ""
+				# now parse the json again to get the texture etc.
+				self.parse_picocad2_file_data(original_text)
 			self.dirty:bool = False
 			self.original_path:str = filepath_or_picoSave
 			self.save_version:str = save_version
 
 	def copy(self):
 		return PicoSave(self, None, None, self.save_version)
+
+	def parse_picocad2_file_data(self, text:str)->None:
+		"""
+		This is lazy but we know it's valid json already since otherwise we wouldn't have the save...
+		This is mainly to save the camera info etc. so that we can save the full data.
+		"""
+		j:dict = json.loads(text)
+		# load the texture and the colors
+		self.texture = j["texture"]
+		self.metadata = j["metadata"]
+
+		# NEED TO ACTUALLY PARSE THOSE FOR REAL THOUGH...
+		print("Need to actually parse texture and metadata for use")
 
 	def parse_picocad1_header(self, header):
 		# identifier;filename;zoomlevel;bgcolor;alphacolor
@@ -1252,6 +1346,9 @@ class PicoSave:
 		return len(file_text_without_texture), len(file_text)
 
 	def output_save_text(self, save_file_name):
+		"""
+		Used for version 1.0 save file
+		"""
 		if self.save_version == "1.0":
 			header = self.header.split(";")
 			header = [header[0]] + [save_file_name] + header[2:]
@@ -1264,7 +1361,19 @@ class PicoSave:
 			o += "\n}" + self.footer
 		else:
 			# save as json
-			raise NotImplementedError("Implement save v2.0")
+			root_objs:list[PicoObject] = [o for o in self.objects if o.parent == None]
+			root_obj:PicoObject = {}
+			if len(root_objs) > 1:
+				print("UH OH TWO ROOTS???")
+			if len(root_objs) == 0:
+				print("NO ROOT OBJECT")
+			else:
+				root_obj = root_objs[0]
+			return json.dumps({
+				"metadata":self.metadata,
+				"texture":self.texture,
+				"graph":root_obj.output_save_dict(self.save_version)
+			})
 		return o
 
 	def get_mesh_objects(self, id_or_negative_one)->list[PicoObject]:
@@ -1661,6 +1770,10 @@ class SimpleVector:
 	def __len__(self):
 		return 3 # it's always 3!
 
+	def to_json_dict(self)->dict:
+		# note that decimal classes need to be turned into floats for json serialization
+		return {"x":float(self.x), "y":float(self.y), "z":float(self.z)}
+
 	def __iter__(self):
 		class SimpleVectorIter:
 			def __init__(iterself, v):
@@ -1769,7 +1882,7 @@ def load_picoCAD_save(filepath):
 			# picoCAD 2 files are valid json dicts, so try loading it as one first.
 			# if it's not a json dict then just ignore it for now
 			j = json.loads(text)
-			if j is dict:
+			if type(j) == dict:
 				return try_load_picoCAD2_save(filepath, j)
 		except json.JSONDecodeError as e:
 			# if it's not valid json then it's likely a picocad1 file, so try loading that instead.
@@ -1789,8 +1902,8 @@ def try_load_picoCAD2_save(filepath:str, data:dict)->tuple[PicoSave, bool]:
 	if len(version) == 0:
 		print("Failed to parse version from file, so assuming it's not a picoCAD file")
 		return None, False
-	objects:list[PicoObject] = parse_picoCAD2_objects(data)
-	return PicoSave(filepath, json.dumps(data), objects, version)
+	objects:list[PicoObject] = parse_picoCAD2_objects(data, version)
+	return PicoSave(filepath, json.dumps(data), objects, version), True
 
 def try_load_picoCAD1_save(filepath:str, text:str)->tuple[PicoSave, bool]:
 		first_line = text.split("\n")[0]
@@ -1949,13 +2062,18 @@ def equation_plane(x1, y1, z1, x2, y2, z2, x3, y3, z3, x, y, z):
 
 
 if __name__ == "__main__":
-	fn:str = "/Users/jordan/Library/Application Support/picocad2/test_v2_sample.txt"
-	# fn:str = "/Users/jordan/Library/Application Support/picocad2/test_flower_downloaded.txt"
-	# fn:str = "/Users/jordan/Library/Application Support/picocad2/test_pig_massive_duplicated.txt"
-	with open("picoCAD2_file_schema.json", "r") as schema_f:
-		schema:dict = json.load(schema_f)
-		with open(fn, "r") as f:
-			jsonschema.validate(json.load(f), schema)
+	base_folder = "~/Library/Application Support/picocad2/"
+	base_folder = os.path.expanduser(base_folder)
+
+	test_files = [os.path.join(dp, f) for dp, dn, filenames in os.walk(base_folder) for f in filenames if os.path.splitext(f)[1] == '.txt' and not f.endswith("ignore.txt")]
+
+	print("testing:", ", ".join(test_files))
+	for fn in test_files:
+		print(f"Testing {fn} schema")
+		with open("picoCAD2_file_schema.json", "r") as schema_f:
+			schema:dict = json.load(schema_f)
+			with open(fn, "r") as f:
+				jsonschema.validate(json.load(f), schema)
 
 # if __name__ == "__main__":
 # 	# test stuff!

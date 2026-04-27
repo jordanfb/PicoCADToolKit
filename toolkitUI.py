@@ -109,7 +109,7 @@ class PicoToolData:
 			self.picoSave, valid = load_picoCAD_save(path)
 			self.valid_save = valid
 		except Exception as e:
-			# print("Error loading pico save!")
+			print("Error loading pico save!", e)
 			self.valid_save = False
 		self.notify_picoSave_listeners() # I guess do this here? The listeners have to be capable of accepting None as a save
 		self.set_selected_mesh(-1) # start by selecting all of them!
@@ -3234,8 +3234,11 @@ if __name__ == "__main__":
 	# for debug testing! This makes it much easier for me!
 	test_filepath = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/output_file_test.txt"
 	test_filepath = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/full_train.txt"
+	test_filepath = os.path.expanduser("~/Library/Application Support/picocad2/test_v2_sample.txt")
 	if os.path.exists(test_filepath):
+		print("Loading test file")
 		picoToolData.set_filepath(test_filepath)
+		print("Is valid file", picoToolData.valid_save)
 
 	main.pack(side="top", fill="both", expand=True)
 	root.protocol("WM_DELETE_WINDOW", lambda : quit_check_for_save(root, picoToolData))
