@@ -335,7 +335,7 @@ class MeshDisplayCanvas(tk.Canvas):
 		objs = self.picoToolData.get_objects_to_render()
 		self.delete("all") # probably worth making an object pool but for now this works
 		for o in objs:
-			transformed_vertices = [None] + [x.mat_mult(o.get_position_matrix()).mat_mult(self.view_matrix) for x in o.vertices]
+			transformed_vertices = [None] + [x.mat_mult(o.get_global_transform_matrix()).mat_mult(self.view_matrix) for x in o.vertices]
 			# print(transformed_vertices)
 			for f in o.faces:
 				# go through the vertices and render each edge!
@@ -3234,7 +3234,7 @@ if __name__ == "__main__":
 	# for debug testing! This makes it much easier for me!
 	test_filepath = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/output_file_test.txt"
 	test_filepath = "C:/Users/jmanf/AppData/Roaming/pico-8/appdata/picocad/full_train.txt"
-	test_filepath = os.path.expanduser("~/Library/Application Support/picocad2/test_v2_sample.txt")
+	test_filepath = os.path.expanduser("~/Library/Application Support/picocad2/test_flower_downloaded.txt")
 	if os.path.exists(test_filepath):
 		print("Loading test file")
 		picoToolData.set_filepath(test_filepath)

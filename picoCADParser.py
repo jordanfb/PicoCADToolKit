@@ -607,12 +607,12 @@ class PicoObject:
 		maximum = self.transform_point_to_world_pos(maximum)
 		return minimum, maximum
 
-	def transform_point_to_world_pos(self, v):
-		this_position_mat = self.get_position_matrix()
+	def transform_point_to_world_pos(self, v:SimpleVector):
+		this_position_mat = self.get_global_transform_matrix()
 		return v.mat_mult(this_position_mat)
 
-	def transform_point_to_local_pos(self, v):
-		this_position_mat = self.get_inverse_position_matrix()
+	def transform_point_to_local_pos(self, v:SimpleVector):
+		this_position_mat = self.get_global_inverse_transform_matrix()
 		return v.mat_mult(this_position_mat)
 
 	def move_origin_to_local_position(self, local_pos):
@@ -623,17 +623,17 @@ class PicoObject:
 	def move_origin_to_world_position(self, worldPos):
 		# move the origin to a new world position! That means you need to calculate all the vertices in worldspace, 
 		# move the pos, then inverse the positions and store those!
-		world_pos_vertices = []
-		this_position_mat = self.get_position_matrix()
+		world_pos_vertices:list[SimpleVector] = []
+		this_position_mat = self.get_global_transform_matrix()
 
 		for v in self.vertices:
 			transformed = v.mat_mult(this_position_mat)
 			world_pos_vertices.append(transformed)
 
 		self.pos = SimpleVector(worldPos)
-		new_inverse_mat = self.get_inverse_position_matrix()
+		new_inverse_mat = self.get_global_inverse_transform_matrix()
 
-		new_local_vertices = []
+		new_local_vertices:list[SimpleVector] = []
 		for v in world_pos_vertices:
 			transformed = v.mat_mult(new_inverse_mat)
 			new_local_vertices.append(transformed)
@@ -784,17 +784,79 @@ class PicoObject:
 			if f.is_dirty():
 				return True
 		return False
+	
+	def get_global_transform_matrix(self)->list[list[float]]:
+		return multiply_n_matrices(self.get_global_transform_matrix_chain())
 
-	def get_position_matrix(self):
+	def get_global_inverse_transform_matrix(self)->list[list[float]]:
+		return multiply_n_matrices(self.get_global_inverse_transform_matrix_chain())
+
+	def get_global_transform_matrix_chain(self)->list[list[list[float]]]:
+		chain:list[list[list[float]]] = [
+			self.get_scale_matrix(),
+			self.get_rot_z_matrix(self.rot.z),
+			self.get_rot_y_matrix(self.rot.y),
+			self.get_rot_x_matrix(self.rot.x),
+			self.get_position_matrix(),
+		]
+		if self.parent is not None:
+			chain += self.parent.get_global_transform_matrix_chain()
+		return chain
+	
+	def get_global_inverse_transform_matrix_chain(self)->list[list[list[float]]]:
+		# I don't want to implement matrix multiplication at the moment, so I'm
+		# just going to pass all the simplevectors through the list of matrices
+		# because I'm lazy. Someone can feel free to open a PR to handle it XD
+		chain:list[list[list[float]]] = []
+		if self.parent is not None:
+			chain = self.parent.get_global_inverse_transform_matrix_chain()
+		chain.append(self.get_inverse_position_matrix())
+		chain.append(self.get_rot_z_matrix(-self.rot.z))
+		chain.append(self.get_rot_y_matrix(-self.rot.y))
+		chain.append(self.get_rot_x_matrix(-self.rot.x))
+		chain.append(self.get_inverse_scale_matrix())
+		return chain
+
+	def get_position_matrix(self)->list[list[float]]:
 		return [[1, 0, 0, self.pos[0]],\
 				[0, 1, 0, self.pos[1]],\
 				[0, 0, 1, self.pos[2]],\
 				[0, 0, 0, 1]]
 
-	def get_inverse_position_matrix(self):
+	def get_rot_x_matrix(self, d:float)->list[list[float]]:
+		return [[1, 0, 0, 0],\
+				[0, math.cos(d), -math.sin(d), 0],\
+				[0, math.sin(d), math.cos(d), 0],\
+				[0, 0, 0, 1]]
+	
+	def get_rot_y_matrix(self, d:float)->list[list[float]]:
+		return [[math.cos(d), 0, math.sin(d), 0],\
+				[0, 1, 0, 0],\
+				[-math.sin(d), 0, math.cos(d), 0],\
+				[0, 0, 0, 1]]
+	
+	def get_rot_z_matrix(self, d:float)->list[list[float]]:
+		return [[math.cos(d), -math.sin(d), 0, 0],\
+				[math.sin(d), math.cos(d), 0, 0],\
+				[0, 0, 1, 0],\
+				[0, 0, 0, 1]]
+
+	def get_scale_matrix(self)->list[list[float]]:
+		return [[self.scale.x, 0, 0, 0],\
+				[0, self.scale.y, 0, 0],\
+				[0, 0, self.scale.z, 0],\
+				[0, 0, 0, 1]]
+
+	def get_inverse_position_matrix(self)->list[list[float]]:
 		return [[1, 0, 0, -self.pos[0]],\
 				[0, 1, 0, -self.pos[1]],\
 				[0, 0, 1, -self.pos[2]],\
+				[0, 0, 0, 1]]
+	
+	def get_inverse_scale_matrix(self)->list[list[float]]:
+		return [[1/self.scale.x, 0, 0, 0],\
+				[0, 1/self.scale.y, 0, 0],\
+				[0, 0, 1/self.scale.z, 0],\
 				[0, 0, 0, 1]]
 
 	def merge_overlapping_vertices(self, distance = 0, remove_hidden_faces = True):
@@ -1054,14 +1116,14 @@ class PicoObject:
 			self.faces.remove(f)
 		return len(to_remove)
 
-	def combine_other_object(self, other):
+	def combine_other_object(self, other:PicoObject):
 		# add all the vertices/faces from that object into this one!
 		vertex_offset = len(self.vertices) # the model that gets imported needs to have offset values!
 		# add all the vertices from the other object
 		# make a matrix to transform it from this position to that position!
 		# need to adjust the vertex positions!
-		this_inverse_pos_mat = self.get_inverse_position_matrix()
-		other_pos_mat = other.get_position_matrix()
+		this_inverse_pos_mat = self.get_global_inverse_transform_matrix()
+		other_pos_mat = other.get_global_transform_matrix()
 
 		for v in other.vertices:
 			transformed = v.mat_mult(other_pos_mat)
@@ -1831,7 +1893,7 @@ def maximum_values_in_list_of_simpleVectors(list_of_simpleVectors):
 		t.z = max(t.z, v.z)
 	return t
 
-def multiply_matrices(m1, m2):
+def multiply_matrices(m1:list[list[float]], m2:list[list[float]])->list[list[float]]:
 	# multiply these two matrices together! This is useful for making viewing transformations!
 	# this assumes 4x4 matrices because we're doing viewing matrices!
 	output = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]]
@@ -1843,6 +1905,14 @@ def multiply_matrices(m1, m2):
 			dot = row.dot(col) + m1[y][3] * m2[3][x]
 			output[y][x] = dot
 	return output
+
+def multiply_n_matrices(matrices:list[list[list[float]]])->list[list[float]]:
+	if len(matrices) == 0:
+		return [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]]
+	m = matrices[0]
+	for i in range(1, len(matrices)):
+		m = multiply_matrices(m, matrices[i])
+	return m
 
 def make_identity_matrix():
 	output = [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]
