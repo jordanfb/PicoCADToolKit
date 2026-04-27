@@ -353,7 +353,7 @@ class MeshDisplayCanvas(tk.Canvas):
 			if self.picoToolData.render_origins.get() == 1:
 				# draw the origin in red!
 				color = "#ff0000"
-				transformed_origin = o.pos.mat_mult(self.view_matrix)
+				transformed_origin = SimpleVector(0,0,0).mat_mult(o.get_global_transform_matrix()).mat_mult(self.view_matrix)
 				# self.create_line(transformed_origin.x, transformed_origin.y, transformed_origin.x+1, transformed_origin.y, fill=color)
 				size = 2
 				self.create_oval(transformed_origin.x-size, transformed_origin.y-size, transformed_origin.x+size, transformed_origin.y+size, fill = color)

@@ -146,8 +146,9 @@ class PicoFace:
 		"""
 		flat_uvs:list[float] = []
 		for u in self.uvs:
-			flat_uvs.append(float(u.x))
-			flat_uvs.append(float(u.y))
+			# have to scale uvs down to the 0-1 range again
+			flat_uvs.append(float(u.x)/16)
+			flat_uvs.append(float(u.y)/16)
 		
 		o:dict = {
 			"vertex_ids":self.vertices,
@@ -539,7 +540,8 @@ class PicoObject:
 					color:int = face["color"]
 					uvs:list[SimpleVector] = []
 					for i in range(0, len(face["uvs"]), 2):
-						uvs.append(SimpleVector(face["uvs"][i], face["uvs"][i+1]))
+						# uvs are 0-1 in v2 instead of up to 16
+						uvs.append(SimpleVector(face["uvs"][i], face["uvs"][i+1])*16)
 					doublesided = "dbl" in face
 					priority = "prio" in face
 					notshaded = "noshade" in face
@@ -817,15 +819,16 @@ class PicoObject:
 		return self.cached_global_inverse_transform
 
 	def get_global_transform_matrix_chain(self)->list[list[list[float]]]:
-		chain:list[list[list[float]]] = [
-			self.get_scale_matrix(),
+		chain:list[list[list[float]]] = []
+		if self.parent is not None:
+			chain += self.parent.get_global_transform_matrix_chain()
+		chain += [
+			self.get_position_matrix(),
 			self.get_rot_z_matrix(self.rot.z),
 			self.get_rot_y_matrix(self.rot.y),
 			self.get_rot_x_matrix(self.rot.x),
-			self.get_position_matrix(),
+			self.get_scale_matrix(),
 		]
-		if self.parent is not None:
-			chain += self.parent.get_global_transform_matrix_chain()
 		return chain
 	
 	def get_global_inverse_transform_matrix_chain(self)->list[list[list[float]]]:
@@ -833,13 +836,14 @@ class PicoObject:
 		# just going to pass all the simplevectors through the list of matrices
 		# because I'm lazy. Someone can feel free to open a PR to handle it XD
 		chain:list[list[list[float]]] = []
-		if self.parent is not None:
-			chain = self.parent.get_global_inverse_transform_matrix_chain()
-		chain.append(self.get_inverse_position_matrix())
-		chain.append(self.get_rot_z_matrix(-self.rot.z))
-		chain.append(self.get_rot_y_matrix(-self.rot.y))
-		chain.append(self.get_rot_x_matrix(-self.rot.x))
+		
 		chain.append(self.get_inverse_scale_matrix())
+		chain.append(self.get_rot_x_matrix(-self.rot.x))
+		chain.append(self.get_rot_y_matrix(-self.rot.y))
+		chain.append(self.get_rot_z_matrix(-self.rot.z))
+		chain.append(self.get_inverse_position_matrix())
+		if self.parent is not None:
+			chain += self.parent.get_global_inverse_transform_matrix_chain()
 		return chain
 
 	def get_position_matrix(self)->list[list[float]]:
@@ -1759,7 +1763,7 @@ class SimpleVector:
 	def get_str(self)->str:
 		return str(self.x)+","+str(self.y)+","+str(self.z)
 
-	def mat_mult(self, mat):
+	def mat_mult(self, mat:list[list[float]])->SimpleVector:
 		# the matrix is [[1,2,3,4],[5,6,7,8],[9,10,11,12],[0,0,0,1]]
 		# basically this is a vector3, but we're assuming it's <x,y,z,1>
 		x = self.x * mat[0][0] + self.y * mat[0][1] + self.z * mat[0][2] + mat[0][3]
