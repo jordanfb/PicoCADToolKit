@@ -3171,11 +3171,11 @@ def get_save_location():
 			return p
 		if sys.platform.startswith("darwin"):
 			# then it should be a mac!
-			return "~/Library/Application Support/pico-8/appdata/picocad/"
+			return os.path.expanduser("~/Library/Application Support/pico-8/appdata/picocad/")
 		if sys.platform.startswith("linux"):
 			# then it should be linux!
 			# do these paths work? Who knows! Someone please tell me :P
-			return "~/.lexaloffle/pico-8/appdata/picocad/"
+			return os.path.expanduser("~/.lexaloffle/pico-8/appdata/picocad/")
 		return "/"
 
 def from_rgb(rgb):
