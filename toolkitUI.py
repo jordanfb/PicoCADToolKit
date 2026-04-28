@@ -607,7 +607,7 @@ class ImageColorEditingPage(Page):
 	def select_image_file(self):
 		# use the file path thingy to select a file!
 		# for now let's limit them to pngs since that way it _should_ be an image
-		self.filename = askopenfilename(initialdir = get_save_location(), title = "Select picoCAD file to Copy In")
+		self.filename = askopenfilename(initialdir = get_v1_save_location(), title = "Select picoCAD file to Copy In")
 		if os.path.splitext(self.filename)[1].lower() != ".png" or not os.path.exists(self.filename):
 			self.selected_filepath_string_var.set("Load a valid png image file!")
 			return
@@ -750,8 +750,14 @@ class IntroPage(Page):
 		self.filepath_label = tk.Label(self, textvariable=self.filepath_string_var)
 		self.filepath_label.pack()
 
-		self.open_file_dialog = make_button(self, text = "Open File", command = self.choose_filename_dialog)
-		self.open_file_dialog.pack()
+		horizontal_frame = tk.Frame(self)
+		horizontal_frame.pack()
+
+		self.open_file_dialog = make_button(horizontal_frame, text = "Open v1 File", command = self.choose_v1_filename_dialog)
+		self.open_file_dialog.pack(side="left")
+
+		self.open_file_dialog = make_button(horizontal_frame, text = "Open v2 File", command = self.choose_v2_filename_dialog)
+		self.open_file_dialog.pack(side="right")
 
 		self.save_backup_button = make_button(self, text = "Save Backup File", command = self.save_backup_file)
 		self.save_backup_button.pack()
@@ -801,8 +807,18 @@ class IntroPage(Page):
 	def open_image_color_editing(self):
 		self.show_page(self.mainView.image_color_editing_page)
 
-	def choose_filename_dialog(self):
-		self.filename = askopenfilename(initialdir = get_save_location(), title = "Open picoCAD file")
+	def choose_v2_filename_dialog(self):
+		# same as v1 just different initialdir
+		self.filename = askopenfilename(initialdir = get_v2_save_location(), title = "Open picoCAD file")
+		# print(self.filename)
+		self.picoToolData.set_filepath(self.filename)
+		if self.picoToolData.is_valid_pico_save():
+			self.update_file_path_display()
+		else:
+			self.filepath_string_var.set("Load a valid picoCAD save file!")
+
+	def choose_v1_filename_dialog(self):
+		self.filename = askopenfilename(initialdir = get_v1_save_location(), title = "Open picoCAD file")
 		# print(self.filename)
 		self.picoToolData.set_filepath(self.filename)
 		if self.picoToolData.is_valid_pico_save():
@@ -1017,7 +1033,7 @@ class FileEditingMaster(Page):
 		self.filepath_label = tk.Label(self, textvariable=self.filepath_string_var)
 		self.filepath_label.pack()
 
-		self.open_file_dialog = make_button(self, text = "Select File", command = self.choose_filename_dialog_to_copy_in)
+		self.open_file_dialog = make_button(self, text = "Select File", command = self.choose_v1_filename_dialog_to_copy_in)
 		self.open_file_dialog.pack()
 
 		self.copy_file_button = make_button(self, text = "Copy File In", command = self.copy_file_in_with_check)
@@ -1027,8 +1043,8 @@ class FileEditingMaster(Page):
 		self.quitButton = make_button(self, text = "Back", command = self.return_to_tools_page)
 		self.quitButton.pack()
 
-	def choose_filename_dialog_to_copy_in(self):
-		self.filename = askopenfilename(initialdir = get_save_location(), title = "Select picoCAD file to Copy In")
+	def choose_v1_filename_dialog_to_copy_in(self):
+		self.filename = askopenfilename(initialdir = get_v1_save_location(), title = "Select picoCAD file to Copy In")
 		# print(self.filename)
 
 		try:
@@ -2946,8 +2962,8 @@ class MainToolPage(Page):
 	# 		copyfile(self.filename, filename + number_text + ext)
 	# 		# self.picoToolData.picoSave.save_to_file(self.picoToolData.picoSave.original_path)
 
-	# def choose_filename_dialog(self):
-	# 	self.filename = askopenfilename(initialdir = get_save_location(), title = "Open picoCAD file")
+	# def choose_v1_filename_dialog(self):
+	# 	self.filename = askopenfilename(initialdir = get_v1_save_location(), title = "Open picoCAD file")
 	# 	# print(self.filename)
 	# 	self.picoToolData.set_filepath(self.filename)
 	# 	if self.picoToolData.is_valid_pico_save():
@@ -3163,7 +3179,7 @@ def quit_check_for_save(root, picoToolData):
 	else:
 		quit(root)
 
-def get_save_location():
+def get_v1_save_location():
 		# print(sys.platform) # If you're poking around the code can you check that this is valid for me?
 		# I know that the windows one works but not sure about the other oses
 		if sys.platform.startswith("win"):
@@ -3176,6 +3192,21 @@ def get_save_location():
 			# then it should be linux!
 			# do these paths work? Who knows! Someone please tell me :P
 			return os.path.expanduser("~/.lexaloffle/pico-8/appdata/picocad/")
+		return "/"
+
+def get_v2_save_location():
+		# print(sys.platform) # If you're poking around the code can you check that this is valid for me?
+		# I know that the windows one works but not sure about the other oses
+		if sys.platform.startswith("win"):
+			p = os.getenv('APPDATA') + "/picocad2/"
+			return p
+		if sys.platform.startswith("darwin"):
+			# then it should be a mac!
+			return os.path.expanduser("~/Library/Application Support/picocad2/")
+		if sys.platform.startswith("linux"):
+			# then it should be linux!
+			# do these paths work? Who knows! Someone please tell me :P
+			return os.path.expanduser("~/picocad2/")
 		return "/"
 
 def from_rgb(rgb):
