@@ -92,6 +92,57 @@ def normalize_fraction(d):
     sign, digit, exponent = normalized.as_tuple()
     return normalized if exponent <= 0 else normalized.quantize(1)
 
+def compare_nested_data_structures(o1:any, o2:any, path:list[str]=[])->bool:
+	if type(o1) != type(o2):
+		if (type(o1) == int or type(o2) == int) and (type(o1) == float or type(o2) == float):
+			if float(o1) != float(o2):
+				print(">".join(path), f"is different value and also different type lol {type(o1)} vs {type(o2)}")
+				return False
+			else:
+				# they're equal when both floats
+				return True
+		print(">".join(path), f"is different type {type(o1)} vs {type(o2)}")
+		return False
+
+	skippable = ["ghost", "folder"] # if not true then we can skip these...
+	if type(o1) == dict:
+		for k, v in o1.items():
+			if k not in o2:
+				if type(v) == bool and not v and k in skippable:
+					# just skip it lol
+					continue
+				path.append(k)
+				print(">".join(path), f"{v} is not in object 2")
+				return False
+			else:
+				newpath = path.copy()
+				newpath.append(k) # lazy...
+				if not compare_nested_data_structures(v, o2[k], newpath):
+					return False
+		for k, v in o2.items():
+			if k not in o1:
+				if type(v) == bool and not v and k in skippable:
+					# just skip it lol
+					continue
+				path.append(k)
+				print(">".join(path), f"{v} is not in object 1")
+				return False
+		return True
+	elif type(o1) == list:
+		if len(o1) != len(o2):
+			print(">".join(path), f"list is different length {len(o1)} vs {len(o2)}")
+			return False
+		for i in range(len(o1)):
+			newpath = path.copy()
+			newpath.append(str(i)) # lazy...
+			if not compare_nested_data_structures(o1[i], o2[i], newpath):
+				return False
+		return True
+	elif o1 != o2:
+		print(">".join(path), f"is different between the two objects {o1} vs {o2}")
+		return False
+	return True
+
 class PicoFace:
 	def __init__(self, picoObject:PicoObject, vertexIndices:list[int], uvs:list[SimpleVector], color:int = 0,
 			  					doublesided:bool = False, notshaded:bool = False, priority:bool = False, nottextured:bool = False):
@@ -1394,6 +1445,11 @@ class PicoSave:
 			self.original_path:str = filepath_or_picoSave
 			self.save_version:str = save_version
 
+			# now since we're testing, check to see if saving it results in the same thing:
+			original_json:dict = json.loads(original_text)
+			test_output_save:dict = json.loads(self.output_save_text(filepath_or_picoSave))
+			print("Compared files are equivalent post save", compare_nested_data_structures(original_json, test_output_save))
+
 	def copy(self):
 		return PicoSave(self, None, None, self.save_version)
 
@@ -1464,7 +1520,7 @@ class PicoSave:
 				"metadata":self.metadata,
 				"texture":self.texture,
 				"graph":root_obj.output_save_dict(self.save_version)
-			})
+			}, sort_keys=True, indent="\t")
 		return o
 
 	def get_mesh_objects(self, id_or_negative_one)->list[PicoObject]:
@@ -1866,7 +1922,16 @@ class SimpleVector:
 
 	def to_json_dict(self)->dict:
 		# note that decimal classes need to be turned into floats for json serialization
-		return {"x":float(self.x), "y":float(self.y), "z":float(self.z)}
+		x = float(self.x)
+		if round(self.x) == self.x:
+			x = int(self.x)
+		y = float(self.y)
+		if round(self.y) == self.y:
+			y = int(self.y)
+		z = float(self.z)
+		if round(self.z) == self.z:
+			z = int(self.z)
+		return {"x":x, "y":y, "z":z}
 
 	def __iter__(self):
 		class SimpleVectorIter:
