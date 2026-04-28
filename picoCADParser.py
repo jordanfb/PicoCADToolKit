@@ -1445,10 +1445,11 @@ class PicoSave:
 			self.original_path:str = filepath_or_picoSave
 			self.save_version:str = save_version
 
-			# now since we're testing, check to see if saving it results in the same thing:
-			original_json:dict = json.loads(original_text)
-			test_output_save:dict = json.loads(self.output_save_text(filepath_or_picoSave))
-			print("Compared files are equivalent post save", compare_nested_data_structures(original_json, test_output_save))
+			if self.save_version.startswith("2"):
+				# now since we're testing, check to see if saving it results in the same thing:
+				original_json:dict = json.loads(original_text)
+				test_output_save:dict = json.loads(self.output_save_text(filepath_or_picoSave))
+				print("Compared files are equivalent post save", compare_nested_data_structures(original_json, test_output_save))
 
 	def copy(self):
 		return PicoSave(self, None, None, self.save_version)
@@ -2051,7 +2052,7 @@ def load_picoCAD_save(filepath):
 			j = json.loads(text)
 			if type(j) == dict:
 				return try_load_picoCAD2_save(filepath, j)
-		except json.JSONDecodeError as e:
+		except json.decoder.JSONDecodeError as e:
 			# if it's not valid json then it's likely a picocad1 file, so try loading that instead.
 			pass
 		return try_load_picoCAD1_save(filepath, text)
