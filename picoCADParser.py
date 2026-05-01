@@ -1344,14 +1344,19 @@ class PicoObject:
 		t += "\n".join([str(f) for f in self.faces])
 		print(t)
 	
-	def output_transform_dict(self, version:str="2.0")->dict:
-		return {
+	def output_transform_dict(self, version:str="2.0", flip_y_scale:bool = False)->dict:
+		o = {
 			"pos":self.pos.to_json_dict(),
 			"rot":self.rot.to_json_dict(),
 			"scale":self.scale.to_json_dict()
 		}
+		if flip_y_scale:
+			s_flipped = self.scale.copy()
+			s_flipped.y *= -1
+			o["scale"] = s_flipped.to_json_dict()
+		return o
 
-	def output_save_dict(self, version:str="2.0")->dict:
+	def output_save_dict(self, version:str="2.0", flip_y_scale:bool=False)->dict:
 		"""
 		Used for version 2.0+ save files
 		"""
@@ -1362,7 +1367,7 @@ class PicoObject:
 			"locked":self.locked,
 			"open":self.open,
 			"motions":self.raw_motions_data,
-			"transform":self.output_transform_dict(version),
+			"transform":self.output_transform_dict(version, flip_y_scale),
 			"open":self.open,
 			"folder":self.folder,
 			"children":[c.output_save_dict(version) for c in self.children]
@@ -1520,7 +1525,7 @@ class PicoSave:
 			return json.dumps({
 				"metadata":self.metadata,
 				"texture":self.texture,
-				"graph":root_obj.output_save_dict(self.save_version)
+				"graph":root_obj.output_save_dict(self.save_version, True)
 			}, sort_keys=True, indent="\t")
 		return o
 
@@ -2099,6 +2104,8 @@ def parse_picoCAD2_objects(d:dict, version:str)->list[PicoObject]:
 	We'll see how it works out.
 	"""
 	root:PicoObject = PicoObject(d["graph"], version)
+	# NOTE: picoCAD 2 has flipped y coords, this at least gets it looking right
+	root.scale.y = -1
 	objects:list[PicoObject] = root.flatten_tree()
 	return objects
 
