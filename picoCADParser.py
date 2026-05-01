@@ -554,7 +554,7 @@ class PicoObject:
 		self.dirty = False
 	
 	def parse_v2(self, d:dict, version:str)->None:
-		_known_fields = ["name", "transform", "pos", "ghost", "visible", "locked", "open", "motions", "mesh", "children"]
+		_known_fields = ["name", "transform", "pos", "ghost", "visible", "locked", "open", "motions", "folder", "mesh", "children"]
 		for k, v in d.items():
 			if k not in _known_fields:
 				print(f"WARNING: FOUND UNHANDLED KEY '{k}' IN PICOOBJECT, PLEASE REPORT THIS AS AN ISSUE")
@@ -1452,6 +1452,7 @@ class PicoSave:
 
 			if self.save_version.startswith("2"):
 				# now since we're testing, check to see if saving it results in the same thing:
+				print("HERE testing")
 				original_json:dict = json.loads(original_text)
 				test_output_save:dict = json.loads(self.output_save_text(filepath_or_picoSave))
 				print("Compared files are equivalent post save", compare_nested_data_structures(original_json, test_output_save))
@@ -2243,12 +2244,14 @@ if __name__ == "__main__":
 	test_files = [os.path.join(dp, f) for dp, dn, filenames in os.walk(base_folder) for f in filenames if os.path.splitext(f)[1] == '.txt' and not f.endswith("ignore.txt")]
 
 	print("testing:", ", ".join(test_files))
-	for fn in test_files:
-		print(f"Testing {fn} schema")
-		with open("picoCAD2_file_schema.json", "r") as schema_f:
-			schema:dict = json.load(schema_f)
+	with open("picoCAD2_file_schema.json", "r") as schema_f:
+		schema:dict = json.load(schema_f)
+		for fn in test_files:
+			print(f"Testing {fn} schema")
 			with open(fn, "r") as f:
 				jsonschema.validate(json.load(f), schema)
+			# now try loading the file and comparing saving it
+			s, worked = load_picoCAD_save(fn)
 
 # if __name__ == "__main__":
 # 	# test stuff!
